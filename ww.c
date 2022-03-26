@@ -14,7 +14,7 @@
 typedef enum bool { false = 0, true = 1 } bool;
 
 int wrap(int fd, int line_length, char *out) {
-	int pstage;
+	int pstage = 0;
 	char c[1];
 	char word[1024];
 	int wordlen = 0;
@@ -27,7 +27,7 @@ int wrap(int fd, int line_length, char *out) {
 				if (wordlen > line_length) { // The word is longer than the wrap length; report failure
 					failed = true;
 				}
-				if (linelen + wordlen > line_length && out[pos - 1] != '\n') { // Word (when added) will exceed wrap length, so add newline
+				if (pos > 0 && linelen + wordlen > line_length && out[pos - 1] != '\n') { // Word (when added) will exceed wrap length, so add newline (unless it is the first word)
 					if(out[pos - 1] == ' ') {
 						out[pos - 1] = '\n'; // Convert ending space to newline
 					} else {
@@ -43,6 +43,7 @@ int wrap(int fd, int line_length, char *out) {
 				}
 				wordlen = 0;
 			}
+			if (pos == 0) continue;
 
 			if (c[0] == '\n') {
 				if(pstage == 1) { // Previous character was also newline, must make new paragraph
@@ -93,8 +94,10 @@ int wrap(int fd, int line_length, char *out) {
 		}
 		wordlen = 0;
 	}
+	while (pos > 0 && (out[pos - 1] == '\n' || out[pos - 1] == ' ')) { // Strip trailing whitespace
+		pos--;
+	}
 	out[pos] = '\0';
-    printf("first character in out before anything |%c|\n", out[0]);
 	return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -107,7 +110,7 @@ int writeWW(char* word, char* dirName)
     if(DEBUG)printf("file name: %s \n", dirName);
     int wd = open(dirName, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
     if(wd==-1)
-    {  
+    {
         perror(dirName);
         return -1;
     }
@@ -214,9 +217,9 @@ int mainHelper(char* givenDirectory, int line_length)
                 tempWrap[strLength + 6 + strlen(currDir->d_name)] = '\0';
 
                 printf("ww this file: |%s| into |%s|\n",currDir->d_name, tempWrap);
-                    
+
                 int sizeOfFile = checkDir.st_size;
-                char* word = (char*)malloc(sizeOfFile+1);
+                char* word = (char*)malloc(sizeOfFile+1 * sizeof(char));
 
                 int fd = open(temp, O_RDONLY);
                 if(fd==-1)
