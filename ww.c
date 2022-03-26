@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #define BUFFER 10
 
 typedef enum bool { false = 0, true = 1 } bool;
@@ -134,12 +134,25 @@ int writeWW(char* word, char* dirName)
 
 int main(int argc, char** argv) 
 {
+    bool failure = false;
     if(argc == 2)
     {
+        int line_length = atoi(argv[1]);
+        if(line_length<1)
+        {
+            printf("ERROR: invalid width");
+            return EXIT_FAILURE;
+        }
         //TODO: read from standard in
     }
     else if(argc ==3)
     {
+        int line_length = atoi(argv[1]);
+        if(line_length<1)
+        {
+            printf("ERROR: invalid width");
+            return EXIT_FAILURE;
+        }
         struct stat arguementDirectory;
         if (stat(argv[2], &arguementDirectory))//checks if a file a valid
         {
@@ -148,12 +161,28 @@ int main(int argc, char** argv)
         }
         if(S_ISREG(arguementDirectory.st_mode))//checks if it is a single regular file
         {
-            if(DEBUG) printf("%s is a normal file\n", argv[2]);
+            if(DEBUG) printf("%s is a normal file so ww\n", argv[2]);
+
+            int sizeOfFile = arguementDirectory.st_size;
+            char* word = (char*)malloc(sizeof(char)*sizeOfFile+1);
+            int fd = open(argv[2], O_RDONLY);
+            if(fd==-1)
+            {
+                perror(argv[2]);
+                return EXIT_FAILURE;
+            }
+            int ret = wrap(fd ,line_length, word);
+            if(ret==EXIT_FAILURE)
+            {
+                failure = true;
+            }
+            printf("%s", word);
+            free(word);
+
         }
         else if(S_ISDIR(arguementDirectory.st_mode))//checks if it is a directory
         {
             if(DEBUG) printf("%s is a Directory\n", argv[2]);
-            
             DIR *givenDir = opendir(argv[2]);
             struct dirent *currDir;
             currDir = readdir(givenDir);
@@ -204,10 +233,21 @@ int main(int argc, char** argv)
                     if(DEBUG)printf("ww this file: %s into %s\n",currDir->d_name, tempWrap);
                     //TODO add the writeWW method along with wrap.
                     
-                    char* word = NULL;//wrap();
-                    
-                    //writeWW(word, tempWrap);
-
+                    int sizeOfFile = checkDir.st_size;
+                    char* word = (char*)malloc(sizeof(char)*sizeOfFile+1);
+                    int fd = open(temp, O_RDONLY);
+                    if(fd==-1)
+                    {
+                        perror(temp);
+                        return EXIT_FAILURE;
+                    }
+                    int ret = wrap(fd ,line_length,word);
+                    if(ret==EXIT_FAILURE)
+                    {
+                        failure = true;
+                    }
+                    writeWW(word, tempWrap);
+                    free(word);
                     free(tempWrap);
                 }
                 else if(S_ISDIR(checkDir.st_mode))//check if a directory is a folder
@@ -228,6 +268,10 @@ int main(int argc, char** argv)
     else
     {
         printf("ERROR: Invalid number of arguments\n");
+        return EXIT_FAILURE;
+    }
+    if(failure==true)
+    {
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
