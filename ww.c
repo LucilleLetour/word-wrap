@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 
 #define DEBUG 0
-#define BUFFER 10
+#define BUFFER 1
 
 typedef enum bool { false = 0, true = 1 } bool;
 
@@ -113,6 +113,7 @@ int writeWW(char* word, char* dirName)
     int length = strlen(word);
     char writeBuffer[BUFFER];
     memset(writeBuffer, '\0', BUFFER);
+    if(DEBUG)printf("the first character in %s: |%c| \n",dirName,word[0]);
     for(int i = 0; i<length;i+=BUFFER)
     {
         if(length-i>=BUFFER)
