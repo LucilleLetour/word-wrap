@@ -134,6 +134,11 @@ int writeWW(char* word, char* dirName)
     return 1;
 }
 
+void align(char* word)
+{
+    
+}
+
 int mainHelper(char* givenDirectory, int line_length)
 {  
     bool failed = false;
@@ -165,7 +170,6 @@ int mainHelper(char* givenDirectory, int line_length)
         DIR *givenDir = opendir(givenDirectory);
         struct dirent *currDir;
         currDir = readdir(givenDir);
-        //stat(givenDirectory, &arguementDirectory);
         struct stat checkDir;
         while(currDir!=NULL)//go through the directory
         {
@@ -227,7 +231,7 @@ int mainHelper(char* givenDirectory, int line_length)
                     failed = true;
                 }
                 //printf("first letter of the word to write: |%c| for |%s| \n", word[0],tempWrap);
-                //writeWW(word, tempWrap);
+                writeWW(word, tempWrap);
                 free(word);
                 free(tempWrap);
                 }
