@@ -194,8 +194,21 @@ int main(int argc, char** argv)
 
                 if(S_ISREG(checkDir.st_mode))//Check if a directory is file
                 {
-                    if(DEBUG)printf("ww this file: %s \n",currDir->d_name);
+                    char* tempWrap = (char*)malloc(sizeof(char)*strlen(argv[2])+1+sizeof(char)*strlen(currDir->d_name)+1+5);
+                    memcpy(tempWrap,argv[2],strlen(argv[2]));
+                    char *p = "/wrap.";
+                    memcpy(&tempWrap[strlen(argv[2])],p,6);
+                    memcpy(&tempWrap[strlen(argv[2])+6],currDir->d_name,strlen(currDir->d_name));
+                    tempWrap[sizeof(char)*strlen(argv[2])+6+sizeof(char)*strlen(currDir->d_name)] = '\0';
+
+                    if(DEBUG)printf("ww this file: %s into %s\n",currDir->d_name, tempWrap);
                     //TODO add the writeWW method along with wrap.
+                    
+                    char* word = NULL;//wrap();
+                    
+                    //writeWW(word, tempWrap);
+
+                    free(tempWrap);
                 }
                 else if(S_ISDIR(checkDir.st_mode))//check if a directory is a folder
                 {
