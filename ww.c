@@ -7,7 +7,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-
 #define DEBUG 1
 #define BUFFER 10
 
@@ -65,11 +64,11 @@ int main(int argc, char** argv)
             perror("ERROR");
             return EXIT_FAILURE;
         }
-        if(S_ISREG(arguementDirectory.st_mode))//regular file
+        if(S_ISREG(arguementDirectory.st_mode))//checks if it is a single regular file
         {
             if(DEBUG) printf("%s is a normal file\n", argv[2]);
         }
-        else if(S_ISDIR(arguementDirectory.st_mode))//directory
+        else if(S_ISDIR(arguementDirectory.st_mode))//checks if it is a directory
         {
             if(DEBUG) printf("%s is a Directory\n", argv[2]);
             
@@ -78,7 +77,7 @@ int main(int argc, char** argv)
             currDir = readdir(givenDir);
             stat(argv[2], &arguementDirectory);
             struct stat checkDir;
-            while(currDir!=NULL)
+            while(currDir!=NULL)//go through the directory
             {
                 if(DEBUG)printf("checking dir: %s \n", currDir->d_name);
                 if(strlen(currDir->d_name)==0)
@@ -87,13 +86,13 @@ int main(int argc, char** argv)
                     currDir = readdir(givenDir);
                     continue;
                 }
-                if(currDir->d_name[0]=='.')
+                if(currDir->d_name[0]=='.')//. case
                 {
                     if(DEBUG)printf("ignored for ww bc of .: %s \n",currDir->d_name);
                     currDir = readdir(givenDir);
                     continue;
                 }
-                if(strlen(currDir->d_name)>5)
+                if(strlen(currDir->d_name)>5)//.wrap case
                 {
                     if(currDir->d_name[0]=='w'&&currDir->d_name[1]=='r'&&currDir->d_name[2]=='a'&&currDir->d_name[3]=='p'&&currDir->d_name[4]=='.')
                     {
@@ -103,6 +102,7 @@ int main(int argc, char** argv)
                     }
                 }
                 
+                //temporairly make a path
                 char* temp = (char*)malloc(sizeof(char)*strlen(argv[2])+1+sizeof(char)*strlen(currDir->d_name)+1);
                 memcpy(temp,argv[2],strlen(argv[2]));
                 temp[sizeof(char)*strlen(argv[2])] = '/';
@@ -110,15 +110,16 @@ int main(int argc, char** argv)
                 temp[sizeof(char)*strlen(argv[2])+1+sizeof(char)*strlen(currDir->d_name)] = '\0';
                 stat(temp, &checkDir);
 
-                if(S_ISREG(checkDir.st_mode))
+                if(S_ISREG(checkDir.st_mode))//Check if a directory is file
                 {
                     if(DEBUG)printf("ww this file: %s \n",currDir->d_name);
+                    //TODO add the writeWW method along with wrap.
                 }
-                else if(S_ISDIR(checkDir.st_mode))
+                else if(S_ISDIR(checkDir.st_mode))//check if a directory is a folder
                 {
                     if(DEBUG)printf("ignored for ww bc it is a directory: %s \n",currDir->d_name);
                 }
-                
+
                 free(temp);
                 currDir = readdir(givenDir);
             }
