@@ -10,6 +10,7 @@
 
 #define DEBUG 0
 #define BUFFER 10
+#define READBUFFER 10
 
 typedef enum bool { false = 0, true = 1 } bool;
 
@@ -137,18 +138,13 @@ int writeWW(char* word, char* dirName)
     return 1;
 }
 
-void align(char* word)
-{
-    
-}
-
 int mainHelper(char* givenDirectory, int line_length)
 {  
     bool failed = false;
     struct stat arguementDirectory;
     if (stat(givenDirectory, &arguementDirectory))//checks if a file a valid
     {
-        perror("ERROR");
+        perror(givenDirectory);
         return EXIT_FAILURE;
     }
     if(S_ISREG(arguementDirectory.st_mode))//checks if it is a single regular file
@@ -216,7 +212,7 @@ int mainHelper(char* givenDirectory, int line_length)
                 memcpy(&tempWrap[strLength + 6], currDir->d_name, strlen(currDir->d_name));
                 tempWrap[strLength + 6 + strlen(currDir->d_name)] = '\0';
 
-                printf("ww this file: |%s| into |%s|\n",currDir->d_name, tempWrap);
+                if(DEBUG)printf("ww this file: |%s| into |%s|\n",currDir->d_name, tempWrap);
 
                 int sizeOfFile = checkDir.st_size;
                 char* word = (char*)malloc(sizeOfFile+1 * sizeof(char));
@@ -248,7 +244,7 @@ int mainHelper(char* givenDirectory, int line_length)
         }
         else
         {
-            printf("ERROR: Not a regular file or a directory");
+            perror("ERROR: Not a regular file or a directory");
             return EXIT_FAILURE;
         }
     return failed ? EXIT_FAILURE : EXIT_SUCCESS;
@@ -260,8 +256,60 @@ int main(int argc, char** argv)
     if(argc == 2)
     {
         int line_length = atoi(argv[1]);
+        
+        char buffer[READBUFFER];
+        int size = READBUFFER;
+        int index = 0;
+        char* pathName = (char*)malloc(READBUFFER);
+        int amount; 
+        while(amount=read(STDIN_FILENO, buffer, READBUFFER))
+        {
+            if(index+amount>=size)
+            {
+                pathName = (char*)realloc(pathName, size*2);
+                size *=2;
+            }
+            int i;
+            for(i = 0; i<READBUFFER; i++)
+            {
+                if(buffer[i]=='\n')
+                {
+                    break;
+                }
+            }
+            if(i==READBUFFER)
+            {
+                memcpy(&pathName[index],buffer, amount);
+            }
+            else
+            {
+                memcpy(&pathName[index],buffer, i);
+                index+=i+1;
+                break;
+            }
+            index+=amount;
+        }
+        if(amount == -1)
+        {
+            perror(STDIN_FILENO);
+            return EXIT_FAILURE;
+        }
+
+        if(index == size)
+        {
+            pathName = (char*)realloc(pathName, size*2);
+            pathName[index] = '\0';
+            size*=2;
+        }
+        else
+        {
+            pathName[index] = '\0';
+        }
+        if(DEBUG)printf("patName: |%s|\n", pathName);
+
         char* path = NULL;
-        int ret = mainHelper(path, line_length);
+        int ret = mainHelper(pathName, line_length);
+        free(pathName);
         if(ret == EXIT_FAILURE)
         {
             return EXIT_FAILURE;
