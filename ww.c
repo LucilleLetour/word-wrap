@@ -10,7 +10,7 @@
 
 #define DEBUG 0
 #define BUFFER 10
-#define READBUFFER 10
+#define READBUFFER 120
 
 typedef enum bool { false = 0, true = 1 } bool;
 
@@ -106,14 +106,14 @@ int writeWW(char* word, char* dirName)
 {
     if(word == NULL || dirName == NULL)
     {
-        return -1;
+        return EXIT_FAILURE;
     }
     if(DEBUG)printf("file name: %s \n", dirName);
     int wd = open(dirName, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
     if(wd==-1)
     {
         perror(dirName);
-        return -1;
+        return EXIT_FAILURE;
     }
     int length = strlen(word);
     char writeBuffer[BUFFER];
@@ -135,7 +135,7 @@ int writeWW(char* word, char* dirName)
         }
     }
     close(wd);
-    return 1;
+    return EXIT_SUCCESS;
 }
 
 int mainHelper(char* givenDirectory, int line_length)
@@ -252,7 +252,6 @@ int mainHelper(char* givenDirectory, int line_length)
 
 int main(int argc, char** argv) 
 {
-    bool failure = false;
     if(argc == 2)
     {
         int line_length = atoi(argv[1]);
@@ -261,12 +260,22 @@ int main(int argc, char** argv)
         int size = READBUFFER;
         int index = 0;
         char* pathName = (char*)malloc(READBUFFER);
+        if(pathName == NULL)
+        {
+            printf("ERROR: Not enough memory for realloc");
+            return EXIT_FAILURE;
+        }
         int amount; 
-        while(amount=read(STDIN_FILENO, buffer, READBUFFER))
+        while((amount=read(STDIN_FILENO, buffer, READBUFFER)))
         {
             if(index+amount>=size)
             {
                 pathName = (char*)realloc(pathName, size*2);
+                if(pathName == NULL)
+                {
+                    printf("ERROR: Not enough memory for realloc");
+                    return EXIT_FAILURE;
+                }
                 size *=2;
             }
             int i;
@@ -298,6 +307,11 @@ int main(int argc, char** argv)
         if(index == size)
         {
             pathName = (char*)realloc(pathName, size*2);
+            if(pathName == NULL)
+            {
+                printf("ERROR: Not enough memory for realloc");
+                return EXIT_FAILURE;
+            }
             pathName[index] = '\0';
             size*=2;
         }
@@ -305,9 +319,8 @@ int main(int argc, char** argv)
         {
             pathName[index] = '\0';
         }
-        if(DEBUG)printf("patName: |%s|\n", pathName);
+        if(DEBUG)printf("pathName: |%s|\n", pathName);
 
-        char* path = NULL;
         int ret = mainHelper(pathName, line_length);
         free(pathName);
         if(ret == EXIT_FAILURE)
@@ -315,7 +328,6 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
         return EXIT_SUCCESS;
-        //TODO: read from standard in
     }
     else if(argc ==3)
     {
