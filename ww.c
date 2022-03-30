@@ -8,11 +8,27 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define BUFFER 10
 #define READBUFFER 120
 
 typedef enum bool { false = 0, true = 1 } bool;
+
+int ww(int fdr, int fdw, int line_length);
+int writeForWW(int fdw, char* buf, int buffer);
+
+int writeForWW(int fdw, char* buf, int buffer)
+{
+    write(fdw, buf, buffer);
+    return -1;
+}
+
+int ww(int fdr, int fdw, int line_length)
+{
+    if(DEBUG)printf("fdr: %d, fdw: %d, line_length: %d \n", fdr,fdw,line_length);
+    writeForWW(fdw, "hello", 5);
+    return EXIT_SUCCESS;
+}
 
 int wrap(int fd, int line_length, char *out) {
 	int pstage = 0;
@@ -102,6 +118,8 @@ int wrap(int fd, int line_length, char *out) {
 	return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
+
+
 int writeWW(char* word, char* dirName)
 {
     if(word == NULL || dirName == NULL)
@@ -138,6 +156,27 @@ int writeWW(char* word, char* dirName)
     return EXIT_SUCCESS;
 }
 
+int dirCheck(char* givenDirectory)
+{
+    struct stat arguementDirectory;
+    if (stat(givenDirectory, &arguementDirectory))//checks if a file a valid
+    {
+        perror(givenDirectory);
+        return -1;
+    }
+    else if(S_ISREG(arguementDirectory.st_mode))//checks if it is a single regular file
+    {
+        if(DEBUG) printf("%s is a normal file so ww\n", givenDirectory);
+        return 0;
+    }
+    else if(S_ISDIR(arguementDirectory.st_mode))//checks if it is a directory
+    {
+        if(DEBUG) printf("%s is a Directory\n", givenDirectory);
+        return 1;
+    }
+    return -1;
+}
+/*
 int mainHelper(char* givenDirectory, int line_length)
 {  
     bool failed = false;
@@ -249,7 +288,133 @@ int mainHelper(char* givenDirectory, int line_length)
         }
     return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
+*/
 
+int multDir(char* givenDirectory, int line_length)
+{
+    DIR *givenDir = opendir(givenDirectory);
+    struct dirent *currDir;
+
+    currDir = readdir(givenDir);
+    struct stat checkDir;
+
+    chdir(givenDirectory);
+
+    while(currDir!=NULL)
+    {
+        if(DEBUG)printf("checking dir: %s \n", currDir->d_name);
+        stat(currDir->d_name, &checkDir);
+        if(currDir->d_name[0]=='.')//. case
+        {
+            if(DEBUG)printf("ignored for ww bc of .: %s \n",currDir->d_name);
+            currDir = readdir(givenDir);
+            continue;
+        }
+        else if(strlen(currDir->d_name)>5)//.wrap case
+        {
+            if(currDir->d_name[0]=='w'&&currDir->d_name[1]=='r'&&currDir->d_name[2]=='a'&&currDir->d_name[3]=='p'&&currDir->d_name[4]=='.')
+            {
+                if(DEBUG)printf("ignored for ww bc of wrap.: %s \n",currDir->d_name);
+                currDir = readdir(givenDir);
+                continue;
+            }
+        }
+        else if(S_ISDIR(checkDir.st_mode))//check if a directory is a folder
+        {
+            if(DEBUG)printf("ignored for ww bc it is a directory: %s \n",currDir->d_name);
+            currDir = readdir(givenDir);
+            continue;
+        }
+
+        if(S_ISREG(checkDir.st_mode))//Check if a directory is file
+        {
+            char* wrap = "wrap.";
+            char* end = "\0";
+            char* tempWrap = (char*) malloc(5+strlen(currDir->d_name)+1);
+            memcpy(tempWrap, wrap, 5);
+            memcpy(&tempWrap[5], currDir->d_name, strlen(currDir->d_name));
+            memcpy(&tempWrap[5+strlen(currDir->d_name)], end, 1);
+
+            if(DEBUG)printf("ww this file: |%s| to |%s|\n", currDir->d_name,tempWrap);
+
+            int fdr = open(currDir->d_name, O_RDONLY);
+            int fdw = open(tempWrap, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
+            ww(fdr, fdw, line_length);
+            free(tempWrap);
+        }
+        currDir = readdir(givenDir);
+    }
+    return -1;
+}
+
+int main(int argc, char** argv) 
+{
+    if(argc == 2)
+    {
+        int line_length = atoi(argv[1]);
+        if(line_length <1)
+        {
+            printf("ERROR: Invalid Length\n");
+            return EXIT_FAILURE;
+        }
+        int ret = ww(0,1,line_length);
+        if(ret == EXIT_FAILURE)
+        {
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    }
+    else if(argc == 3)
+    {
+        int line_length = atoi(argv[1]);
+        if(line_length <1)
+        {
+            printf("ERROR: Invalid Length\n");
+            return EXIT_FAILURE;
+        }
+        int option = dirCheck(argv[2]);
+        if(option==-1)
+        {
+            printf("ERROR: Invalid Directory\n");
+            return EXIT_FAILURE;
+        }
+        else if(option==0)
+        {
+            if(DEBUG)printf("|%s|: Normal file\n",argv[2]);
+            int fdr = open(argv[2], O_RDONLY);
+            if(fdr==-1)
+            {
+                perror(argv[2]);
+                return EXIT_FAILURE;
+            }
+            int ret = ww(fdr,1,line_length);
+            close(fdr);
+            if(ret == EXIT_FAILURE)
+            {
+                return EXIT_FAILURE;
+            }
+            return EXIT_SUCCESS;
+        }
+        else if(option==1)
+        {
+            if(DEBUG)printf("|%s|: Directory",argv[2]);
+            int ret = multDir(argv[2], line_length);
+            if(ret == EXIT_FAILURE)
+            {
+                return EXIT_FAILURE;
+            }
+            return EXIT_SUCCESS;
+        }
+    }
+    else
+    {
+        printf("ERROR: Invalid number of arguments\n");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+/*
 int main(int argc, char** argv) 
 {
     if(argc == 2)
@@ -346,3 +511,4 @@ int main(int argc, char** argv)
     }
     return EXIT_SUCCESS;
 }
+*/
