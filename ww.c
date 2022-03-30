@@ -15,18 +15,11 @@
 typedef enum bool { false = 0, true = 1 } bool;
 
 int ww(int fdr, int fdw, int line_length);
-int writeForWW(int fdw, char* buf, int buffer);
-
-int writeForWW(int fdw, char* buf, int buffer)
-{
-    write(fdw, buf, buffer);
-    return -1;
-}
 
 int ww(int fdr, int fdw, int line_length)
 {
     if(DEBUG)printf("fdr: %d, fdw: %d, line_length: %d \n", fdr,fdw,line_length);
-    writeForWW(fdw, "hello", 5);
+    write(fdw, "hello", 5);
     return EXIT_SUCCESS;
 }
 
@@ -118,44 +111,6 @@ int wrap(int fd, int line_length, char *out) {
 	return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-
-
-int writeWW(char* word, char* dirName)
-{
-    if(word == NULL || dirName == NULL)
-    {
-        return EXIT_FAILURE;
-    }
-    if(DEBUG)printf("file name: %s \n", dirName);
-    int wd = open(dirName, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
-    if(wd==-1)
-    {
-        perror(dirName);
-        return EXIT_FAILURE;
-    }
-    int length = strlen(word);
-    char writeBuffer[BUFFER];
-    memset(writeBuffer, '\0', BUFFER);
-    if(DEBUG)printf("the first character in %s: |%c| \n",dirName,word[0]);
-    for(int i = 0; i<length;i+=BUFFER)
-    {
-        if(length-i>=BUFFER)
-        {
-            memcpy(writeBuffer, &word[i], BUFFER);
-            if(DEBUG)printf("writing:|%s| up to %d\n",writeBuffer, BUFFER);
-            write(wd, writeBuffer, BUFFER);
-        }
-        else
-        {
-            memcpy(writeBuffer, &word[i], length-i);
-            if(DEBUG)printf("writing:|%s| up to %d\n",writeBuffer, length-i);
-            write(wd, writeBuffer, length-i);
-        }
-    }
-    close(wd);
-    return EXIT_SUCCESS;
-}
-
 int dirCheck(char* givenDirectory)
 {
     struct stat arguementDirectory;
@@ -176,119 +131,6 @@ int dirCheck(char* givenDirectory)
     }
     return -1;
 }
-/*
-int mainHelper(char* givenDirectory, int line_length)
-{  
-    bool failed = false;
-    struct stat arguementDirectory;
-    if (stat(givenDirectory, &arguementDirectory))//checks if a file a valid
-    {
-        perror(givenDirectory);
-        return EXIT_FAILURE;
-    }
-    if(S_ISREG(arguementDirectory.st_mode))//checks if it is a single regular file
-    {
-        if(DEBUG) printf("%s is a normal file so ww\n", givenDirectory);
-        int sizeOfFile = arguementDirectory.st_size;
-        char* word = (char*)malloc(sizeof(char)*sizeOfFile+1);
-        int fd = open(givenDirectory, O_RDONLY);
-        if(fd==-1)
-        {
-            perror(givenDirectory);
-            return EXIT_FAILURE;
-        }
-        int ret = wrap(fd ,line_length, word);
-        printf("%s", word);
-        free(word);
-        return ret;
-    }
-    else if(S_ISDIR(arguementDirectory.st_mode))//checks if it is a directory
-    {
-        if(DEBUG) printf("%s is a Directory\n", givenDirectory);
-        DIR *givenDir = opendir(givenDirectory);
-        struct dirent *currDir;
-        currDir = readdir(givenDir);
-        struct stat checkDir;
-        while(currDir!=NULL)//go through the directory
-        {
-            if(DEBUG)printf("checking dir: %s \n", currDir->d_name);
-            if(strlen(currDir->d_name)==0)
-            {
-                //TODO: if the length of the file name is 0
-                currDir = readdir(givenDir);
-                continue;
-            }
-            if(currDir->d_name[0]=='.')//. case
-            {
-                if(DEBUG)printf("ignored for ww bc of .: %s \n",currDir->d_name);
-                currDir = readdir(givenDir);
-                continue;
-            }
-            if(strlen(currDir->d_name)>5)//.wrap case
-            {
-                if(currDir->d_name[0]=='w'&&currDir->d_name[1]=='r'&&currDir->d_name[2]=='a'&&currDir->d_name[3]=='p'&&currDir->d_name[4]=='.')
-                {
-                    if(DEBUG)printf("ignored for ww bc of wrap.: %s \n",currDir->d_name);
-                    currDir = readdir(givenDir);
-                    continue;
-                }
-            }
-                //temporairly make a path
-            int strLength = strlen(givenDirectory);
-            char* temp = (char*)malloc(strLength + 1 + strlen(currDir->d_name) + 1);
-            memcpy(temp,givenDirectory,strLength);
-            temp[strLength] = '/';
-            memcpy(&temp[strLength+1],currDir->d_name,strlen(currDir->d_name));
-            temp[strLength + 1 + strlen(currDir->d_name)] = '\0';
-            stat(temp, &checkDir);
-
-            if(S_ISREG(checkDir.st_mode))//Check if a directory is file
-            {
-                char* tempWrap = (char*)malloc(strLength + 6 + strlen(currDir->d_name) + 1);
-                memcpy(tempWrap,givenDirectory,strLength);
-                char *p = "/wrap.";
-                memcpy(&tempWrap[strLength], p, 6);
-                memcpy(&tempWrap[strLength + 6], currDir->d_name, strlen(currDir->d_name));
-                tempWrap[strLength + 6 + strlen(currDir->d_name)] = '\0';
-
-                if(DEBUG)printf("ww this file: |%s| into |%s|\n",currDir->d_name, tempWrap);
-
-                int sizeOfFile = checkDir.st_size;
-                char* word = (char*)malloc(sizeOfFile+1 * sizeof(char));
-
-                int fd = open(temp, O_RDONLY);
-                if(fd==-1)
-                {
-                    perror(temp);
-                    return EXIT_FAILURE;
-                }
-                int ret = wrap(fd,line_length,word);
-
-                if(ret==EXIT_FAILURE)
-                {
-                    failed = true;
-                }
-                //printf("first letter of the word to write: |%c| for |%s| \n", word[0],tempWrap);
-                writeWW(word, tempWrap);
-                free(word);
-                free(tempWrap);
-                }
-                else if(S_ISDIR(checkDir.st_mode))//check if a directory is a folder
-                {
-                    if(DEBUG)printf("ignored for ww bc it is a directory: %s \n",currDir->d_name);
-                }
-                free(temp);
-                currDir = readdir(givenDir);
-            }
-        }
-        else
-        {
-            perror("ERROR: Not a regular file or a directory");
-            return EXIT_FAILURE;
-        }
-    return failed ? EXIT_FAILURE : EXIT_SUCCESS;
-}
-*/
 
 int multDir(char* givenDirectory, int line_length)
 {
@@ -299,6 +141,8 @@ int multDir(char* givenDirectory, int line_length)
     struct stat checkDir;
 
     chdir(givenDirectory);
+
+    bool failed = false;
 
     while(currDir!=NULL)
     {
@@ -338,13 +182,20 @@ int multDir(char* givenDirectory, int line_length)
             if(DEBUG)printf("ww this file: |%s| to |%s|\n", currDir->d_name,tempWrap);
 
             int fdr = open(currDir->d_name, O_RDONLY);
-            int fdw = open(tempWrap, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
-            ww(fdr, fdw, line_length);
+            int fdw = open(tempWrap, O_RDWR | O_CREAT |O_APPEND, S_IRUSR|S_IWUSR);
+            int ret = ww(fdr, fdw, line_length);
+            if (ret == EXIT_FAILURE)
+            {
+                failed = true;
+            }
             free(tempWrap);
+            close(fdr);
+            close(fdw);
         }
         currDir = readdir(givenDir);
     }
-    return -1;
+    closedir(givenDir);
+    return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) 
@@ -413,102 +264,3 @@ int main(int argc, char** argv)
     }
     return EXIT_SUCCESS;
 }
-
-/*
-int main(int argc, char** argv) 
-{
-    if(argc == 2)
-    {
-        int line_length = atoi(argv[1]);
-        
-        char buffer[READBUFFER];
-        int size = READBUFFER;
-        int index = 0;
-        char* pathName = (char*)malloc(READBUFFER);
-        if(pathName == NULL)
-        {
-            printf("ERROR: Not enough memory for realloc");
-            return EXIT_FAILURE;
-        }
-        int amount; 
-        while((amount=read(STDIN_FILENO, buffer, READBUFFER)))
-        {
-            if(index+amount>=size)
-            {
-                pathName = (char*)realloc(pathName, size*2);
-                if(pathName == NULL)
-                {
-                    printf("ERROR: Not enough memory for realloc");
-                    return EXIT_FAILURE;
-                }
-                size *=2;
-            }
-            int i;
-            for(i = 0; i<READBUFFER; i++)
-            {
-                if(buffer[i]=='\n')
-                {
-                    break;
-                }
-            }
-            if(i==READBUFFER)
-            {
-                memcpy(&pathName[index],buffer, amount);
-            }
-            else
-            {
-                memcpy(&pathName[index],buffer, i);
-                index+=i+1;
-                break;
-            }
-            index+=amount;
-        }
-        if(amount == -1)
-        {
-            perror(STDIN_FILENO);
-            return EXIT_FAILURE;
-        }
-
-        if(index == size)
-        {
-            pathName = (char*)realloc(pathName, size*2);
-            if(pathName == NULL)
-            {
-                printf("ERROR: Not enough memory for realloc");
-                return EXIT_FAILURE;
-            }
-            pathName[index] = '\0';
-            size*=2;
-        }
-        else
-        {
-            pathName[index] = '\0';
-        }
-        if(DEBUG)printf("pathName: |%s|\n", pathName);
-
-        int ret = mainHelper(pathName, line_length);
-        free(pathName);
-        if(ret == EXIT_FAILURE)
-        {
-            return EXIT_FAILURE;
-        }
-        return EXIT_SUCCESS;
-    }
-    else if(argc ==3)
-    {
-        int line_length = atoi(argv[1]);
-        int ret = mainHelper(argv[2], line_length);
-        if(ret == EXIT_FAILURE)
-        {
-            return EXIT_FAILURE;
-        }
-        return EXIT_SUCCESS;
-    }
-    else
-    {
-        printf("ERROR: Invalid number of arguments\n");
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
-}
-*/
