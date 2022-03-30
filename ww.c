@@ -97,6 +97,10 @@ int wrap(int fd, int line_length, char *out) {
 	while (pos > 0 && (out[pos - 1] == '\n' || out[pos - 1] == ' ')) { // Strip trailing whitespace
 		pos--;
 	}
+	if(pos > 0) {
+		out[pos] = '\n';
+		pos++;
+	}
 	out[pos] = '\0';
 	return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
