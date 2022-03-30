@@ -1,11 +1,15 @@
 # word-wrap
-Project 2 of System Programming (CS214): Luke Letourneau and Joshua Chung(jyc70)-Group 40
+Project 2 of System Programming (CS214): Luke Letourneau(lml252) and Joshua Chung(jyc70)-Group 40
 
 ## Goals ##
 Implement a program that reformats a text file to fit in a certain number of columns (the page width) using only POSIX I/O functions(open(), read(), and write()). It will first read the given text file and either print the reformatted version onto standard output or save the reformatted version to a new text file with the "wrap." prefix.
 
 ## Part I: Word-Wrap ##
-TODO
+
+Word wrap works by doing a loop, character by character, of the input file, until the input is expended. At each iteration the character is either whitespace (space or newline) or a character. If it is a character we add it to a word buffer, but if it is whitespace we have more logic to execute. When encountering white space, we drain the word buffer if applicable and then handle cases like checking if two or more newlines in a row (new paragraph), multiple spaces in a row, etc. 
+
+### Testing Strategy ###
+Word wrap was first tested manually with the example given and then with other manual string to ensure that spaces and newlines were handled correctly, and that the line length was correctly enforced. Then, we wrote a script that took in a sample text (lorem ipsum for example) and put a random number of spaces and possibly a newline between each word. When these random scripts were put into a directory and all wrapped at once they should be byte-identical at the end, and they were.
 
 ## Part II: Word-Wrap with Directory ##
 
