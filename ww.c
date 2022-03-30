@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <dirent.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -14,39 +15,34 @@
 
 typedef enum bool { false = 0, true = 1 } bool;
 
-int ww(int fdr, int fdw, int line_length)
-{
-    if(DEBUG)printf("fdr: %d, fdw: %d, line_length: %d \n", fdr,fdw,line_length);
-    write(fdw, "hello", 5);
-    return EXIT_SUCCESS;
-}
-
-int wrap(int fd, int line_length, char *out) 
+int wrap(int fdr, int fdw, int line_length)
 {
 	int pstage = 0;
 	char c[1];
-	char word[1024];
+	char word[5192];
 	int wordlen = 0;
 	int linelen = 0;
 	int pos = 0;
 	bool failed = false;
-	while (read(fd, c, 1)) {
+	bool ins_space = false;
+	char lst, llst;
+	while (read(fdr, c, 1)) {
 		if (c[0] == ' ' || c[0] == '\n') { // Handle ws
 			if (wordlen > 0) { // Add the word that's been being built first
 				if (wordlen > line_length) { // The word is longer than the wrap length; report failure
 					failed = true;
 				}
-				if (pos > 0 && linelen + wordlen > line_length && out[pos - 1] != '\n') { // Word (when added) will exceed wrap length, so add newline (unless it is the first word)
-					if(out[pos - 1] == ' ') {
-						out[pos - 1] = '\n'; // Convert ending space to newline
-					} else {
-						out[pos] = '\n';
-						pos++;
-					}
+				if (pos > 0 && linelen + wordlen + (ins_space ? 1 : 0) > line_length && lst != '\n') { // Word (when added) will exceed wrap length, so add newline (unless it is the first word)
+					write(fdw, "\n", 1);
+					pos++;
 					linelen = 0;
+					ins_space = false;
+				}
+				if(ins_space) {
+					write(fdw, " ", 1);
 				}
 				for (int i = 0; i < wordlen; i++) { // Add in the word
-					out[pos] = word[i];
+					write(fdw, word + i, 1);
 					pos++;
 					linelen++;
 				}
@@ -56,10 +52,10 @@ int wrap(int fd, int line_length, char *out)
 
 			if (c[0] == '\n') {
 				if(pstage == 1) { // Previous character was also newline, must make new paragraph
-					out[pos] = '\n';
+					write(fdw, "\n", 1);
 					pos++;
-					if(out[pos - 2] != '\n') {
-						out[pos] = '\n';
+					if(llst != '\n') {
+						write(fdw, "\n", 1);
 						pos++;
 					}
 					linelen = 0;
@@ -68,16 +64,16 @@ int wrap(int fd, int line_length, char *out)
 					pstage = 1;
 				}
 			} else if (c[0] == ' ') {
-				if (pos != 0 && out[pos - 1] != ' ' && out[pos - 1] != '\n' && linelen <= line_length) { // Add space char if appropriate: no preceding whitespace and not overrunning line length
-					out[pos] = ' ';
+				if (pos != 0 && lst != ' ' && lst != '\n' && linelen <= line_length) { // Add space char if appropriate: no preceding whitespace and not overrunning line length
+					ins_space = true;
 					pos++;
 					linelen++;
 				}
 			}
 		} else {
 			if(pstage == 1) {
-				if(c[0] != ' ' && out[pos - 1] != ' ' && out[pos - 1] != '\n') { // Add a space instead of the newline, if it's needed
-			 		out[pos] = ' ';
+				if(c[0] != ' ' && lst != ' ' && lst != '\n') { // Add a space instead of the newline, if it's needed
+					write(fdw, " ", 1);
 					pos++;
 					linelen++;
 				}
@@ -86,33 +82,40 @@ int wrap(int fd, int line_length, char *out)
 			word[wordlen] = c[0];
 			wordlen++;
 		}
+		llst = lst;
+		lst = c[0];
 	}
 	if (wordlen > 0) { // Repeat of above, add word into file in case EOF with word in buffer
 		if (wordlen > line_length) {
 			failed = true;
 		}
 		if (linelen + wordlen > line_length) {
-			out[pos] = '\n';
+			write(fdw, "\n", 1);
 			linelen = 0;
 			pos++;
 		}
 		for (int i = 0; i < wordlen; i++) {
-			out[pos] = word[i];
+			write(fdw, word + i, 1);
 			pos++;
 			linelen++;
 		}
 		wordlen = 0;
 	}
-	while (pos > 0 && (out[pos - 1] == '\n' || out[pos - 1] == ' ')) { // Strip trailing whitespace
-		pos--;
-	}
 	if(pos > 0) {
-		out[pos] = '\n';
+		write(fdw, "\n", 1);
 		pos++;
 	}
-	out[pos] = '\0';
 	return failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
+
+int ww(int fdr, int fdw, int line_length)
+{
+    if(DEBUG)printf("fdr: %d, fdw: %d, line_length: %d \n", fdr,fdw,line_length);
+    //write(fdw, "hello", 5);
+	wrap(fdr, fdw, line_length);
+    return EXIT_SUCCESS;
+}
+
 
 int dirCheck(char* givenDirectory)
 {
