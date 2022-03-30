@@ -21,7 +21,8 @@ int ww(int fdr, int fdw, int line_length)
     return EXIT_SUCCESS;
 }
 
-int wrap(int fd, int line_length, char *out) {
+int wrap(int fd, int line_length, char *out) 
+{
 	int pstage = 0;
 	char c[1];
 	char word[1024];
@@ -180,7 +181,7 @@ int multDir(char* givenDirectory, int line_length)
             if(DEBUG)printf("ww this file: |%s| to |%s|\n", currDir->d_name,tempWrap);
 
             int fdr = open(currDir->d_name, O_RDONLY);
-            int fdw = open(tempWrap, O_RDWR | O_CREAT |O_APPEND, S_IRUSR|S_IWUSR);
+            int fdw = open(tempWrap, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
             int ret = ww(fdr, fdw, line_length);
             if (ret == EXIT_FAILURE)
             {
