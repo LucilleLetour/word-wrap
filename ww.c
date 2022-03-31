@@ -41,6 +41,8 @@ int wrap(int fdr, int fdw, int line_length)
 				}
 				if(ins_space) {
 					write(fdw, " ", 1);
+					pos++;
+					linelen++;
 				}
 				for (int i = 0; i < wordlen; i++) { // Add in the word
 					write(fdw, word + i, 1);
@@ -67,8 +69,6 @@ int wrap(int fdr, int fdw, int line_length)
 			} else if (c[0] == ' ') {
 				if (pos != 0 && lst != ' ' && lst != '\n' && linelen <= line_length) { // Add space char if appropriate: no preceding whitespace and not overrunning line length
 					ins_space = true;
-					pos++;
-					linelen++;
 				}
 			}
 		} else {
