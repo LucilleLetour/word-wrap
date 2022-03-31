@@ -111,9 +111,7 @@ int wrap(int fdr, int fdw, int line_length)
 int ww(int fdr, int fdw, int line_length)
 {
     if(DEBUG)printf("fdr: %d, fdw: %d, line_length: %d \n", fdr,fdw,line_length);
-    //write(fdw, "hello", 5);
-	wrap(fdr, fdw, line_length);
-    return EXIT_SUCCESS;
+    return wrap(fdr, fdw, line_length);
 }
 
 
