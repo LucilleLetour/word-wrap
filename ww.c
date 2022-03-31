@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #define BUFFER 10
 #define READBUFFER 120
 
@@ -232,7 +232,6 @@ int main(int argc, char** argv)
         int option = dirCheck(argv[2]);
         if(option==-1)
         {
-            printf("ERROR: Invalid Directory\n");
             return EXIT_FAILURE;
         }
         else if(option==0)
