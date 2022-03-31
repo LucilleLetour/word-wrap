@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 
 #define DEBUG 0
+#define printFailed 1
 #define BUFFER 10
 #define READBUFFER 120
 
@@ -210,13 +211,16 @@ int main(int argc, char** argv)
         if(line_length <1)
         {
             printf("ERROR: Invalid Length\n");
+            if(printFailed)printf("FAILED\n");
             return EXIT_FAILURE;
         }
         int ret = ww(0,1,line_length);
         if(ret == EXIT_FAILURE)
         {
+            if(printFailed)printf("FAILED\n");
             return EXIT_FAILURE;
         }
+        if(printFailed)printf("SUCCESS\n");
         return EXIT_SUCCESS;
     }
     else if(argc == 3)
@@ -225,11 +229,13 @@ int main(int argc, char** argv)
         if(line_length <1)
         {
             printf("ERROR: Invalid Length\n");
+            if(printFailed)printf("FAILED\n");
             return EXIT_FAILURE;
         }
         int option = dirCheck(argv[2]);
         if(option==-1)
         {
+            if(printFailed)printf("FAILED\n");
             return EXIT_FAILURE;
         }
         else if(option==0)
@@ -239,14 +245,17 @@ int main(int argc, char** argv)
             if(fdr==-1)
             {
                 perror(argv[2]);
+                if(printFailed)printf("FAILED\n");
                 return EXIT_FAILURE;
             }
             int ret = ww(fdr,1,line_length);
             close(fdr);
             if(ret == EXIT_FAILURE)
             {
+                if(printFailed)printf("FAILED\n");
                 return EXIT_FAILURE;
             }
+            if(printFailed)printf("SUCCESS\n");
             return EXIT_SUCCESS;
         }
         else if(option==1)
@@ -255,15 +264,19 @@ int main(int argc, char** argv)
             int ret = multDir(argv[2], line_length);
             if(ret == EXIT_FAILURE)
             {
+                if(printFailed)printf("FAILED\n");
                 return EXIT_FAILURE;
             }
+            if(printFailed)printf("SUCCESS\n");
             return EXIT_SUCCESS;
         }
     }
     else
     {
         printf("ERROR: Invalid number of arguments\n");
+        if(printFailed)printf("FAILED\n");
         return EXIT_FAILURE;
     }
+    if(printFailed)printf("Should never get here?: SUCCESS\n");
     return EXIT_SUCCESS;
 }
