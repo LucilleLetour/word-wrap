@@ -61,10 +61,12 @@ int wrap(int fdr, int fdw, int line_length)
 						write(fdw, "\n", 1);
 						pos++;
 					}
+					ins_space = false;
 					linelen = 0;
 					pstage = 2; // Directly proceding newlines are ignored
 				} else if(pstage == 0) {
 					pstage = 1;
+					ins_space = true;
 				}
 			} else if (c[0] == ' ') {
 				if (pos != 0 && lst != ' ' && lst != '\n' && linelen <= line_length) { // Add space char if appropriate: no preceding whitespace and not overrunning line length
