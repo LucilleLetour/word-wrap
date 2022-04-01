@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 
 #define DEBUG 0
-#define printFailed 1
+#define printFailed 0
 #define BUFFER 10
 #define READBUFFER 120
 
