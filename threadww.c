@@ -15,6 +15,56 @@
 
 typedef enum bool { false = 0, true = 1 } bool;
 
+typedef struct node 
+{
+    char* dirName;
+    char* fileName;
+    struct node* next;
+} node;
+
+typedef struct queue {
+    node* head;
+    bool open;
+    int count;
+    pthread_mutex_t lock;
+    pthread_cond_t enqueue_ready, dequeue_ready;
+} queue;
+
+void queue_init(struct queue *q)
+{
+    q->head = NULL;
+    q->open = false;
+    q->count = 0;
+    pthread_mutex_init(&q->lock, NULL);
+    pthread_cond_init(&q->enqueue_ready, NULL);
+    pthread_cond_init(&q->dequeue_ready, NULL);
+}
+
+void enqueue(char* dirName, char* fileName, queue *q)
+{
+    pthread_mutex_lock(&q->lock);
+    node* curr = (node*) malloc(sizeof(node));
+    curr->dirName = dirName;
+    curr->fileName = fileName;
+    curr->next = q->head;
+    q->head = curr;
+    q->count++;
+    pthread_cond_signal(&q->dequeue_ready);
+    pthread_mutex_unlock(&q->lock);
+}
+void dequeue(node* curr, queue *q)
+{
+    pthread_mutex_lock(&q->lock);
+    while (q->open==true && q->count == 0) 
+    {
+        pthread_cond_wait(&q->dequeue_ready, &q->lock);
+    }
+    curr = q->head;
+    q->head = q->head->next;
+    q->count--;
+    pthread_mutex_unlock(&q->lock);
+}
+
 int main(int argc, char** argv) 
 {
     if(argc != 2)
