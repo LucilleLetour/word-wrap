@@ -24,7 +24,7 @@ typedef struct node
 
 typedef struct queue {
     node* head;
-    bool open;
+    int open;
     int count;
     pthread_mutex_t lock;
     pthread_cond_t enqueue_ready, dequeue_ready;
@@ -33,7 +33,7 @@ typedef struct queue {
 void queue_init(struct queue *q)
 {
     q->head = NULL;
-    q->open = false;
+    q->open = 0;
     q->count = 0;
     pthread_mutex_init(&q->lock, NULL);
     pthread_cond_init(&q->enqueue_ready, NULL);
@@ -55,7 +55,7 @@ void enqueue(char* dirName, char* fileName, queue *q)
 void dequeue(node* curr, queue *q)
 {
     pthread_mutex_lock(&q->lock);
-    while (q->open==true && q->count == 0) 
+    while (q->open>0 && q->count == 0) 
     {
         pthread_cond_wait(&q->dequeue_ready, &q->lock);
     }
