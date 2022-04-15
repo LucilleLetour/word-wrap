@@ -189,11 +189,12 @@ void dequeue(node* curr, queue *q)
         pthread_cond_wait(&q->dequeue_ready, &q->lock);
     }
     memcpy(curr, q->head, sizeof(node));
-    q->head = q->head->next;
-    if(q->head == NULL)
+    if(q->head->next ==NULL)
     {
-        q->rear = NULL;
+        free(q->head);
+        q->head == NULL;
     }
+    q->head = q->head->next;
     q->count--;
     pthread_mutex_unlock(&q->lock);
 }
@@ -271,11 +272,46 @@ int directoryWorker(queue* dir, queue* file)
 
 int wwWorker(queue* file, int line_length)
 {
+    pthread_mutex_lock(&file->lock);
+    file->open++;
+    pthread_mutex_unlock(&file->lock);
     node* deqNode = (node*)malloc(sizeof(node));
     dequeue(deqNode, file);
     
-    
-    return 0;
+    int pathlen = strlen(deqNode->dirName);
+    int filelen = strlen(deqNode->fileName);
+
+    char* pathToOpen = (char*)malloc(sizeof(char*)*(pathlen + filelen + 2));
+    char* pathToWrite = (char*)malloc(sizeof(char*)*(pathlen + filelen + 2 + 5));
+
+    memcpy(pathToOpen, deqNode->dirName, pathlen);
+    pathToOpen[pathlen] = '/';
+    memcpy(&pathToOpen[pathlen+1], deqNode->fileName, filelen);
+    pathToOpen[pathlen + filelen + 1] = '\0';
+
+    memcpy(pathToWrite, deqNode->dirName, pathlen);
+    char wrapCon[6] = "/wrap.";
+    memcpy(&pathToWrite[pathlen], &wrapCon, 6);
+    memcpy(&pathToWrite[pathlen+6], deqNode->fileName, filelen);
+    pathToOpen[pathlen + filelen + 6] = '\0';
+
+    printf("open file |%s| and write to |%s|\n", pathToOpen, pathToWrite);
+    int fdr = open(pathToOpen, O_RDONLY);
+    int fdw = open(pathToWrite, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
+    int ret = wrap(fdr, fdw, line_length);
+
+    close(fdr);
+    close(fdw);
+
+    free(pathToOpen);
+    free(pathToWrite);
+    free(deqNode);
+
+    pthread_mutex_lock(&file->lock);
+    file->open--;
+    pthread_mutex_unlock(&file->lock);
+
+    return ret;
 }
 
 
@@ -342,6 +378,8 @@ int main(int argc, char** argv)
     printQueue(directory);
     printQueue(file);
 
+    wwWorker(file, 10);
+    printQueue(file);
     char buff[FILENAME_MAX];
     return EXIT_SUCCESS;
 }
