@@ -140,6 +140,7 @@ void queue_init(queue *q)
 
 void printQueue(queue *q)
 {
+    printf("------------------------------------\n");
     pthread_mutex_lock(&q->lock);
     if(DEBUG)printf("locked \n");
     for(node* temp = q->head; temp!=NULL; temp=temp->next)
@@ -156,14 +157,10 @@ void printQueue(queue *q)
     if(q->head == NULL)
     {
         printf("Nothing in Queue\n");
-        printf("------------------------------------\n");
-    }
-    else
-    {
-         printf("------------------------------------\n");
     }
     if(DEBUG)printf("unlocked \n");
     pthread_mutex_unlock(&q->lock);
+    printf("------------------------------------\n");
 }
 
 void enqueue(char* dirName, char* fileName, queue *q)
@@ -171,8 +168,12 @@ void enqueue(char* dirName, char* fileName, queue *q)
     pthread_mutex_lock(&q->lock);
     if(DEBUG)printf("locked \n");
     node* curr = (node*) malloc(sizeof(node));
-    curr->dirName = dirName;
-    curr->fileName = fileName;
+    memcpy(curr->dirName, dirName, strlen(dirName));
+    if(curr->fileName!=NULL)
+    {
+        memcpy(curr->fileName, fileName, strlen(fileName));
+    }
+    curr->fileName = NULL;
     if(q->head == NULL)
     {
         q->head = curr;
@@ -218,19 +219,19 @@ void dequeue(node* curr, queue *q)
 
 void directoryWorker(queue* dir, queue* file)
 {
-    printf("helllo\n");
     if(DEBUG)printf("starting directoryworker \n");
-
     if(DEBUG)printf("trying to lock \n");
     pthread_mutex_lock(&dir->lock);
     if(DEBUG)printf("locked \n");
+
     if(dir->open==0 && dir->count==0)
     {
-        printf("1nothing in the dir queue and nothing open\n");
         if(DEBUG)printf("unlocked \n");
         pthread_mutex_unlock(&dir->lock);
         return;
     }
+    if(DEBUG)printf("unlocked \n");
+    pthread_mutex_unlock(&dir->lock);
 
     node* deqNode = (node*)malloc(sizeof(node));
     dequeue(deqNode, dir);
@@ -270,31 +271,32 @@ void directoryWorker(queue* dir, queue* file)
 
         if(DEBUG)printf("checking dir: %s \n", newDir);
         stat(newDir, &checkDir);
-        if(currDir->d_name[0]=='.')//. case
+        if(tempDirStrLen==0)
         {
-            if(DEBUG)printf("ignored bc of .: %s \n",currDir->d_name);
+            if(1)printf("ignored bc there is no name: |%s| \n",currDir->d_name);
             currDir = readdir(givenDir);
             continue;
         }
-        else if(strlen(currDir->d_name)>5)//.wrap case
+        if(currDir->d_name[0]=='.')//. case
         {
-            if(currDir->d_name[0]=='w'&&currDir->d_name[1]=='r'&&currDir->d_name[2]=='a'&&currDir->d_name[3]=='p'&&currDir->d_name[4]=='.')
-            {
-                if(DEBUG)printf("ignored bc of wrap.: %s \n",currDir->d_name);
-                currDir = readdir(givenDir);
-                continue;
-            }
+            if(1)printf("ignored bc of .: %s \n",currDir->d_name);
+            currDir = readdir(givenDir);
+            continue;
+        }
+        if(strlen(currDir->d_name)>=5 && currDir->d_name[0]=='w'&&currDir->d_name[1]=='r'&&currDir->d_name[2]=='a'&&currDir->d_name[3]=='p'&&currDir->d_name[4]=='.')//.wrap case
+        {
+            if(1)printf("ignored bc of wrap.: %s \n",currDir->d_name);
+            currDir = readdir(givenDir);
+            continue;
         }
         if(S_ISDIR(checkDir.st_mode))//check if a directory is a folder
         {
+            if(1)printf("adding |%s| to dirQueue\n",newDir);
             enqueue(newDir, NULL, dir);
-            if(DEBUG)printf("adding |%s| to dirQueue\n",newDir);
-            currDir = readdir(givenDir);
-            continue;
         }
         else if(S_ISREG(checkDir.st_mode))//Check if a directory is file
         {
-            if(DEBUG)printf("adding |%s| as dirName and |%s| as fileName to fileQueue\n",deqNode->dirName, currDir->d_name);
+            if(1)printf("adding |%s| as dirName and |%s| as fileName to fileQueue\n",deqNode->dirName, currDir->d_name);
             enqueue(deqNode->dirName, currDir->d_name, file);
         }
         currDir = readdir(givenDir);
@@ -469,12 +471,86 @@ int main(int argc, char** argv)
     queue* file = (queue*)malloc(sizeof(queue));
     queue_init(file);
 
-    enqueue("testingDirectory",NULL, directory);
-    printQueue(directory);
-    printf("\n \n");
-    dirThreader(M, directory, file);
+    
+
+    enqueue("testingDirectory\0",NULL, directory);
+
+    // node* nodeTemp = (node*)malloc(sizeof(node));
+    // printQueue(directory);
+    // enqueue("1","1", directory);
+    // printQueue(directory);
+    // enqueue("2","2", directory);
+    // printQueue(directory);
+
+    // dequeue(nodeTemp, directory);
+    // printQueue(directory);
+
+    // enqueue("3","3", directory);
+    // printQueue(directory);
+    // enqueue("4","4", directory);
+    // printQueue(directory);
+
+    // dequeue(nodeTemp, directory);
+    // printQueue(directory);
+    // enqueue("5","5", directory);
+    // printQueue(directory);
+    // dequeue(nodeTemp, directory);
+    // printQueue(directory);
+
+    
+
+
+
+
+    // printQueue(directory);
+    // printf("\n \n");
+    // dirThreader(M, directory, file);
+    // printQueue(directory);
+    // printQueue(file);
+
+
+
+
+
+
+
+
+
+    printf("init\n");
     printQueue(directory);
     printQueue(file);
+
+    printf("1\n");
+    directoryWorker(directory, file);
+    printQueue(directory);
+    printQueue(file);
+
+    printf("2\n");
+    directoryWorker(directory, file);
+    printQueue(directory);
+    printQueue(file);
+
+    printf("3\n");
+    directoryWorker(directory, file);
+    printQueue(directory);
+    printQueue(file);
+    
+    printf("4\n");
+    directoryWorker(directory, file);
+    printQueue(directory);
+    printQueue(file);
+
+    printf("5\n");
+    directoryWorker(directory, file);
+    printQueue(directory);
+    printQueue(file);
+
+    printf("6\n");
+    directoryWorker(directory, file);
+    printQueue(directory);
+    printQueue(file);
+    
+
     
     return EXIT_SUCCESS;
 }
