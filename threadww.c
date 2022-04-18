@@ -469,11 +469,12 @@ int main(int argc, char** argv)
 	}
 
 	// Join threads
-	for(int i = 0; i < N; i++) {
-		pthread_join(fwtids[i], NULL);
-	}
 	for(int i = 0; i < M; i++) {
 		pthread_join(dwtids[i], NULL);
+	}
+
+	for(int i = 0; i < N; i++) {
+		pthread_join(fwtids[i], NULL);
 	}
 
     //enqueue("testingDirectory\0",NULL, directory);
