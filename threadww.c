@@ -210,18 +210,22 @@ typedef struct dwargs {
 	queue* fq;
 } dwargs;
 
+
+//I dont think its a good idea to unlock before dequeue
 void* directoryworker(void* vargs) {
 	dwargs* args = (dwargs*)vargs;
     int locked == pthread_mutex_trylock(&args->dq->lock);
     while(!(args->dq->open == 0 && args->dq->count == 0)) {
 		if(DEBUG)printf("unlocked \n");
-    	pthread_mutex_unlock(&args->dq->lock);
-		// TODO WAIT ON DEQUEUE
+		while(args->dq->count == 0) {
+			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock)
+		}
     	node* deqNode = (node*)malloc(sizeof(node));
     	dequeue(deqNode, dir);
-    	if(deqNode==NULL) {
+    	pthread_mutex_unlock(&args->dq->lock);
+		if(deqNode==NULL) {
         	if(DEBUG) printf("2nothing in the dir queue and nothing open\n");
-        	return &EXIT_FAILURE;
+			return &EXIT_FAILURE;
     	}
     	if(DEBUG) printf("here dequeded %s\n", deqNode->dirName);
 
@@ -300,6 +304,13 @@ void* fileworker(void* vargs) {
 	fwargs* args = (fwargs*)vargs;
     int locked = pthread_mutex_trylock(&args->fq->lock);
     int ret = EXIT_SUCCESS;
+	/*
+	Change logic to:
+	wait for dequeue ready
+	check if open == 0 and count ==0
+		if true return (we are done)
+		otherwise read from queue and continue
+	*/
 	while(!(args->fq->open == 0 && args->fq->count == 0)) {
 		locked = 1;
 		while(args->fq->count == 0) {
