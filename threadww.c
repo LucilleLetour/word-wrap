@@ -352,31 +352,6 @@ bool updateCond(queue *dir) {
     return ret;
 }
 
-int dirThreader(int M, queue *dir, queue *file) {
-    while(updateCond(dir)) {
-        printf("multithreading\n");
-        printQueue(dir);
-        pthread_t* tids = (pthread_t*)malloc(sizeof(pthread_t) * M);
-        for (int i = 0; i < M; i++) {
-            dirArgs* temp = (dirArgs*)malloc(sizeof(dirArgs));
-            temp->dir = dir;
-            temp->file = file;
-            int a = pthread_create(&tids[i], NULL, directoryWorker, temp);
-            printf("started process %d %lu and is |%d| \n \n", i,tids[i], a);
-            sleep(1);
-            free(temp);
-        }
-        for (int i = 0; i < M; i++) {
-            printf("waiting for %lu\n",tids[i]);
-            pthread_join(tids[i], NULL);
-            printf("done waiting for %lu\n",tids[i]);
-        }
-        printQueue(dir);
-        free(tids);
-    }
-    return 1;
-}
-
 int wwThreader(int N, int line_length, queue dir, queue file)
 {
     return 1;
