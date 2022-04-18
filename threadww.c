@@ -216,7 +216,7 @@ void* directoryworker(void* vargs) {
     while(!(args->dq->open == 0 && args->dq->count == 0)) {
 		if(DEBUG)printf("unlocked \n");
     	pthread_mutex_unlock(&args->dq->lock);
-		// TODO WAIT ON DEQUEUE READY SIGNAL
+		// TODO WAIT ON DEQUEUE
     	node* deqNode = (node*)malloc(sizeof(node));
     	dequeue(deqNode, dir);
     	if(deqNode==NULL) {
@@ -302,10 +302,11 @@ void* fileworker(void* vargs) {
     int ret = EXIT_SUCCESS;
 	while(!(args->fq->open == 0 && args->fq->count == 0)) {
 		locked = 1;
-		if(DEBUG)printf("unlocked \n");
-    	pthread_mutex_unlock(&args->fq->lock);
-		// TODO WAIT ON DEQUEUE READY SIGNAL
+		while(args->fq->count == 0) {
+			pthread_cond_wait(&args->fq->dequeue_ready, &args->fq->lock);
+		}
 		args->fq->open++;
+    	pthread_mutex_unlock(&args->fq->lock);
     	node* deqNode = (node*)malloc(sizeof(node));
     	dequeue(&deqNode, args->fq);
 
