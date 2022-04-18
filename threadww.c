@@ -166,8 +166,6 @@ void printQueue(queue *q)
 
 void enqueue(node* n, queue *q)
 {
-    pthread_mutex_lock(&q->lock);
-    if(DEBUG)printf("locked \n");
     if(q->head == NULL)
     {
         q->head = n;
@@ -176,33 +174,17 @@ void enqueue(node* n, queue *q)
     else
     {
         q->rear->next = n;
-        q->rear = q->rear->next;
+        q->rear = n;
     }
     q->count++;
     pthread_cond_signal(&q->dequeue_ready);
-    if(DEBUG)printf("unlocked \n");
-    pthread_mutex_unlock(&q->lock);
+
 }
 void dequeue(node** n, queue *q)
 {
-    pthread_mutex_lock(&q->lock);
-    if(DEBUG)printf("locked \n");
-    while (q->open>0 && q->count == 0) 
-    {
-        pthread_cond_wait(&q->dequeue_ready, &q->lock);
-    }
-    if(q->open == 0 && q->count == 0)
-    {
-        *n = NULL;
-        if(DEBUG)printf("unlocked \n");
-        pthread_mutex_unlock(&q->lock);
-        return;
-    }
     *n = q->head;
     q->head = q->head->next;
     q->count--;
-    if(DEBUG)printf("unlocked \n");
-    pthread_mutex_unlock(&q->lock);
 }
 
 typedef struct dwargs {
@@ -215,29 +197,33 @@ typedef struct dwargs {
 void* directoryworker(void* vargs) {
 	dwargs* args = (dwargs*)vargs;
     int locked == pthread_mutex_trylock(&args->dq->lock);
-    while(!(args->dq->open == 0 && args->dq->count == 0)) {
-		if(DEBUG)printf("unlocked \n");
+    while(!(args->dq->open == 0 && args->dq->count == 0)) 
+	{
 		while(args->dq->count == 0) {
 			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock)
 		}
-    	node* deqNode = (node*)malloc(sizeof(node));
+		if(DEBUG)printf("there is a dir to read \n");
+
+		//chech for cond here
+		node* deqNode = (node*)malloc(sizeof(node));
     	dequeue(deqNode, dir);
+		args->dq->open++;
     	pthread_mutex_unlock(&args->dq->lock);
-		if(deqNode==NULL) {
-        	if(DEBUG) printf("2nothing in the dir queue and nothing open\n");
+
+		if(deqNode==NULL) 
+		{
+        	if(DEBUG) printf("there is something wrong\n");
 			return &EXIT_FAILURE;
     	}
-    	if(DEBUG) printf("here dequeded %s\n", deqNode->dirName);
+
+    	if(DEBUG) printf("here dequeded %s\n", deqNode->path);
 
     	DIR* qdir = opendir(deqNode->path);
+
     	if(qdir == NULL)
     	{
-        	printf("invalid directory in queue of |%s| \n", deqNode->dirName);
+        	printf("invalid directory in queue of |%s| \n", deqNode->path);
     	}
-
-    	pthread_mutex_lock(&args->dq->lock);
-    	dir->open++;
-    	pthread_mutex_unlock(&args->dq->lock);
 
     	struct dirent *cdir;
     	cdir = readdir(qdir);
@@ -267,18 +253,26 @@ void* directoryworker(void* vargs) {
             	//if(1)printf("ignored bc of wrap.: %s \n",currDir->d_name);
             	//cdir = readdir(qdir);
             	//continue;
+				if(DEBUG) printf("%s\n", cdir->d_name);
         	} else if(S_ISDIR(st.st_mode)) { //check if a directory is a folder
             	//if(1)printf("adding |%s| to dirQueue\n",newDir);
             	node* n = (node*)malloc(sizeof(node));
 				n->path = cpath;
 				n->next = NULL;
+
+				pthread_mutex_lock(&args->dq->lock);
 				enqueue(n, args->dq);
+				pthread_mutex_unlock(&args->dq->lock);
+
         	} else if(S_ISREG(st.st_mode)) { //Check if a directory is file
             	//if(1)printf("adding |%s| as dirName and |%s| as fileName to fileQueue\n",deqNode->path, cdir->d_name);
             	node* n = (node*)malloc(sizeof(node));
 				n->path = cpath;
 				n->next = NULL;
+
+				pthread_mutex_lock(&args->fq->lock);
 				enqueue(n, args->fq);
+				pthread_mutex_unlock(&args->fq->lock);
         	}
         	cdir = readdir(qdir);
     	}
@@ -286,7 +280,7 @@ void* directoryworker(void* vargs) {
 
     	pthread_mutex_lock(&args->dq->lock);
     	if(DEBUG)printf("locked \n");
-    	dir->open--;
+    	args->dq->open--;
     	if(DEBUG)printf("unlocked \n");
     	pthread_mutex_unlock(&args->dq->lock);
     }
