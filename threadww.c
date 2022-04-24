@@ -188,6 +188,7 @@ void dequeue(node** n, queue *q)
 }
 
 typedef struct dwargs {
+	int tid;
 	queue* dq;
 	queue* fq;
 } dwargs;
@@ -195,10 +196,13 @@ typedef struct dwargs {
 
 //I dont think its a good idea to unlock before dequeue
 void* directoryworker(void* vargs) {
-	int* ret;
-	*ret = EXIT_SUCCESS;
+	printf("Started dir worker thread\n");
+	int *ret;
+	int out = 0;
+	ret = &out;
 	dwargs* args = (dwargs*)vargs;
     while(true) {
+		printf("waiting for dir to dequeue\n");
 		pthread_mutex_lock(&args->dq->lock);
 		while(args->dq->count == 0) {
 			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock);
@@ -221,6 +225,25 @@ void* directoryworker(void* vargs) {
 			return ret;
     	}
 
+		struct stat st;
+		stat(deqNode->path, &st);
+		if(S_ISREG(st.st_mode)) {
+			printf("file in dq\n");
+			node* n = (node*)malloc(sizeof(node));
+			n->path = deqNode->path;
+			n->next = NULL;
+			pthread_mutex_lock(&args->fq->lock);
+			enqueue(n, args->fq);
+			pthread_mutex_unlock(&args->fq->lock);
+
+			pthread_mutex_lock(&args->dq->lock);
+    		if(DEBUG)printf("locked \n");
+    		args->dq->open--;
+    		if(DEBUG)printf("unlocked \n");
+    		pthread_mutex_unlock(&args->dq->lock);
+			continue;
+		}
+
     	if(DEBUG) printf("here dequeded %s\n", deqNode->path);
 
     	DIR* qdir = opendir(deqNode->path);
@@ -232,7 +255,6 @@ void* directoryworker(void* vargs) {
 
     	struct dirent *cdir;
     	cdir = readdir(qdir);
-    	struct stat st;
 
     	while(cdir!=NULL)
     	{
@@ -295,6 +317,7 @@ void* directoryworker(void* vargs) {
 }
 
 typedef struct fwargs {
+	int tid;
 	queue* fq;
 	int line_len;
 } fwargs;
@@ -302,8 +325,10 @@ typedef struct fwargs {
 void* fileworker(void* vargs) {
 	fwargs* args = (fwargs*)vargs;
     //int locked = pthread_mutex_trylock(&args->fq->lock);
-    int *ret;
-	*ret = EXIT_SUCCESS;
+    printf("Started file worker thread\n");
+	int *ret;
+	int out = 0;
+	ret = &out;
 	/*
 	Change logic to:
 	wait for dequeue ready
@@ -312,6 +337,7 @@ void* fileworker(void* vargs) {
 		otherwise read from queue and continue
 	*/
 	while(true) {
+		printf("waiting for file to dequeue\n");
 		pthread_mutex_lock(&args->fq->lock);
 		while(args->fq->count == 0) {
 			pthread_cond_wait(&args->fq->dequeue_ready, &args->fq->lock);
@@ -434,13 +460,17 @@ int main(int argc, char** argv)
 	f->next = NULL;
 	enqueue(f, dq);
 
+	printQueue(dq);
+
 	// Start Directory worker threads
 	pthread_t* dwtids = malloc(M * sizeof(pthread_t));
 	dwargs* da = malloc(sizeof(dwargs));
 	da->dq = dq;
 	da->fq = fq;
 
-	for(int i = 0; i , M; i++) {
+	printf("hiii\n");
+	for(int i = 0; i < M; i++) {
+		//da[i]->tid = i;
 		pthread_create(&dwtids[i], NULL, directoryworker, da);
 	}
 

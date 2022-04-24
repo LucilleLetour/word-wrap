@@ -7,3 +7,7 @@ CFLAGS2 = -g -std=c99 -pthread
 
 threadww: threadww.c
 	$(CC) $(CFLAGS2) -o $@ $^
+
+
+cleant:
+	find ./test -type f -name 'wrap.*' -delete
