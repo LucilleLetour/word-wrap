@@ -11,7 +11,7 @@ all: testing.c threadww.c
 threadww: threadww.c
 	$(CC) $(CFLAGS2) -o $@ $^
 
-testing: testing.c
+kekW: testing.c
 	$(CC) $(CFLAGS2) -o $@ $^
 
 cleant:
