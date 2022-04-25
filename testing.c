@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define printFailed 0
 
 typedef struct node
@@ -86,8 +86,8 @@ void enqueue(node* n, queue *q)
 
 int dequeue(void* n, queue *q, pthread_t tid)
 {
-    if(DEBUG)printf("1:|%lu| count: |%d| open|%d|\n",tid,q->count, q->open);
     pthread_mutex_lock(&q->lock);
+    if(DEBUG)printf("1:|%lu| count: |%d| open|%d|\n",tid,q->count, q->open);
     if(q->count==0 && q->open ==0)
     {
         if(DEBUG)printf("DUP:|%lu| count: |%d| open|%d|\n",tid,q->count, q->open);
@@ -212,6 +212,17 @@ void* directoryWorker(void* vargs)
 void* fileWorker(void* vargs) 
 {
     dwargs* args = (dwargs*)vargs;
+    pthread_mutex_lock(&args->dq->lock);
+    pthread_mutex_lock(&args->fq->lock);
+    if(args->dq->open==0 && args->dq->count==0 && args->fq->count==0)
+    {
+        printf("skipped\n");
+        pthread_mutex_unlock(&args->dq->lock);
+        pthread_mutex_unlock(&args->fq->lock);
+        pthread_exit(NULL);
+    }
+    pthread_mutex_unlock(&args->dq->lock);
+    pthread_mutex_unlock(&args->fq->lock);
     node* testing = (node*)malloc(sizeof(node));
     int temp = 0;
     while(1)
@@ -227,28 +238,44 @@ void* fileWorker(void* vargs)
         {
             pthread_mutex_unlock(&args->fq->lock);
             pthread_mutex_unlock(&args->dq->lock);
+            printf("nothing left so bye|%lu|\n",args->tid);
             pthread_exit(NULL);
         }
         pthread_mutex_unlock(&args->fq->lock);
         temp = dequeue((void*)testing, args->fq, args->tid);
-
-        pthread_mutex_lock(&args->fq->lock);
-        args->fq->open--;
-        pthread_mutex_unlock(&args->fq->lock);
+        if(temp == 0)
+        {
+            //pthread_cond_signal(&args->fq->dequeue_ready);
+            pthread_mutex_unlock(&args->dq->lock);
+            continue;
+        }
+        
 
         pthread_cond_signal(&args->fq->dequeue_ready);
         pthread_mutex_unlock(&args->dq->lock);
 
         if(testing == NULL)
         {
+            printf("nothing left so byeNULL\n");
             pthread_exit(NULL);
         }
         if(testing->directory == NULL)
         {
             printf("ERROR: file directory is NULL\n");
         }
+
         printf("popped |%s| from the file queue so do stuff with it\n", testing->directory);
+        pthread_mutex_lock(&args->fq->lock);
+        args->fq->open--;
+        pthread_mutex_unlock(&args->fq->lock);
+
+        pthread_mutex_lock(&args->fq->lock);
+        if(1)printf("after popping: |%lu| count: |%d| open|%d|\n",args->tid,args->fq->count, args->fq->open);
+        pthread_mutex_unlock(&args->fq->lock);
+
+        
     }
+    pthread_cond_signal(&args->fq->dequeue_ready);
 }
 
 int main(int argc, char** argv) 
@@ -298,23 +325,23 @@ int main(int argc, char** argv)
 	}
 
     pthread_t* fwtids = (pthread_t*)malloc(atoi(argv[2]) * sizeof(pthread_t));
-    // dwargs** fa = malloc(atoi(argv[2]) * sizeof(dwargs*));
-	// for(int i = 0; i < atoi(argv[2]); i++) 
-    // {
-	// 	dwargs* di = malloc(sizeof(dwargs));
-	// 	//da[i]->dq = dq;
-	// 	//da[i]->fq = fq;
-	// 	//da[i]->tid = i;
-	// 	di->dq = dq;
-	// 	di->fq = fq;
-	// 	di->tid = i;
-	// 	da[i] = di;
-	// }
+    dwargs** fa = malloc(atoi(argv[2]) * sizeof(dwargs*));
+	for(int i = 0; i < atoi(argv[2]); i++) 
+    {
+		dwargs* di = malloc(sizeof(dwargs));
+		//da[i]->dq = dq;
+		//da[i]->fq = fq;
+		//da[i]->tid = i;
+		di->dq = dq;
+		di->fq = fq;
+		di->tid = i;
+		fa[i] = di;
+	}
 
     for(int i = 0; i < atoi(argv[2]); i++) 
     {
-		pthread_create(&fwtids[i], NULL, fileWorker, (void*)qs);
-        if(DEBUG)printf("starting fw %lu\n",fwtids[i]);
+		pthread_create(&fwtids[i], NULL, fileWorker, (void*)fa[i]);
+        if(DEBUG)printf("starting fw %lu, %d\n",fwtids[i], i);
 	}
 
     printf("done\n");
