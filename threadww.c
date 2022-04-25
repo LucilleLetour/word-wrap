@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define printFailed 0
 
 typedef enum bool { false = 0, true = 1 } bool;
@@ -203,12 +203,12 @@ void* directoryworker(void* vargs) {
 	dwargs* args = (dwargs*)vargs;
     while(true) {
 		//printQueue(args->dq);
-		printf("%d: waiting for dir to dequeue\n", args->tid);
+		//printf("%d: waiting for dir to dequeue\n", args->tid);
 		//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 		pthread_mutex_lock(&args->dq->lock);
-		printf("%d: %d open and %d total\n", args->tid, args->dq->open, args->dq->count);
+		//printf("%d: %d open and %d total\n", args->tid, args->dq->open, args->dq->count);
 		if(args->dq->open == 0 && args->dq->count == 0) {
-			printf("%d: no more dirs\n", args->tid);
+			//printf("%d: no more dirs\n", args->tid);
 			//if(DEBUG)printf("   %d: lock fq\n", args->tid);
 			pthread_cond_signal(&args->dq->dequeue_ready);
 			pthread_mutex_unlock(&args->dq->lock);
@@ -226,9 +226,9 @@ void* directoryworker(void* vargs) {
 			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock);
 			//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 		}
-		printf("%d: %d open and %d total\n", args->tid, args->dq->open, args->dq->count);
+		//printf("%d: %d open and %d total\n", args->tid, args->dq->open, args->dq->count);
 		if(args->dq->open == 0 && args->dq->count == 0) {
-			printf("%d: no more dirs\n", args->tid);
+			//printf("%d: no more dirs\n", args->tid);
 			//if(DEBUG)printf("   %d: lock fq\n", args->tid);
 			pthread_cond_signal(&args->dq->dequeue_ready);
 			pthread_mutex_unlock(&args->dq->lock);
@@ -306,7 +306,7 @@ void* directoryworker(void* vargs) {
         	stat(cpath, &st);
         	if(cpathlen == 0 || cdir->d_name[0] == '.' || !strncmp("wrap.", cdir->d_name, 5))
         	{
-				if(DEBUG) printf("ignored |%s| \n",  cdir->d_name);
+				//if(DEBUG) printf("ignored |%s| \n",  cdir->d_name);
         	} else if(S_ISDIR(st.st_mode)) { //check if a directory is a folder
             	//if(1)printf("adding |%s| to dirQueue\n",newDir);
             	node* n = (node*)malloc(sizeof(node));
@@ -316,7 +316,7 @@ void* directoryworker(void* vargs) {
 				//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 				pthread_mutex_lock(&args->dq->lock);
 				enqueue(n, args->dq);
-				printf("%s\n", n->path);
+				//printf("%s\n", n->path);
 				pthread_cond_signal(&args->dq->dequeue_ready);
 				//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
 				pthread_mutex_unlock(&args->dq->lock);
@@ -375,7 +375,7 @@ void* fileworker(void* vargs) {
 		otherwise read from queue and continue
 	*/
 	char dirsempty = 0;
-	while(true) {
+	while(1) {
 		//printf("im working--------------------w  aiting for file to dequeue\n");
 		pthread_mutex_lock(&args->dq->lock);
 		if(args->dq->count == 0 && args->dq->open == 0) dirsempty = 1;
@@ -389,7 +389,7 @@ void* fileworker(void* vargs) {
 			pthread_exit((void*)ret);
 			return (void*)ret;
 		}
-		while(args->fq->count == 0) {
+		while(args->fq->count == 0 && args->fq->open > 0) {
 			//pthread_mutex_lock(&args->dq->lock);
 			/*if(args->dq->count == 0 && args->dq->open == 0) {
 				printf("file worker done\n");
@@ -400,11 +400,14 @@ void* fileworker(void* vargs) {
 				return NULL;
 			}*/
 			//pthread_mutex_unlock(&args->dq->lock);
+			printf("fw waiting\n");
 			pthread_cond_wait(&args->fq->dequeue_ready, &args->fq->lock);
+			printf("%d", args->fq->count);
 		}
-		if(args->fq->count <= 0) {
+		if(args->fq->count == 0) {
 			pthread_cond_signal(&args->fq->dequeue_ready);
 			pthread_mutex_unlock(&args->fq->lock);
+			printf("%d: wexiting\n", args->tid);
 			pthread_exit((void*)ret);
 			return (void*)ret;
 		}
@@ -432,6 +435,7 @@ void* fileworker(void* vargs) {
     	close(fdr);
     	close(fdw);
     	free(deqNode);
+		free(writepath);
 
     	pthread_mutex_lock(&args->fq->lock);
     	args->fq->open--;
@@ -509,7 +513,7 @@ int main(int argc, char** argv)
 	f->next = NULL;
 	enqueue(f, dq);
 
-	printQueue(dq);
+	//printQueue(dq);
 
 	// Start Directory worker threads
 	pthread_t* dwtids = malloc(M * sizeof(pthread_t));
@@ -548,7 +552,7 @@ int main(int argc, char** argv)
 	// Join threads
 	for(int i = 0; i < M; i++) {
 		pthread_join(dwtids[i], (void*)s);
-		status = status;// | *s;
+		status = status | *s;
 		printf("joined %d\n", i);
 	}
 
