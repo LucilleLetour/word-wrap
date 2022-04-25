@@ -5,5 +5,11 @@ CFLAGS2 = -g -std=c99 -pthread
 #ww: ww.c
 #	$(CC) $(CFLAGS) -o $@ $^
 
-threadww: threadww.c
+#threadww: threadww.c
+#	$(CC) $(CFLAGS2) -o $@ $^
+
+kekW: testing.c
 	$(CC) $(CFLAGS2) -o $@ $^
+
+cleant:
+	find ./test -type f -name 'wrap.*' -delete
