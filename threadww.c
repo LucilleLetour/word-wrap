@@ -146,11 +146,11 @@ void printQueue(queue *q)
     for(node* temp = q->head; temp!=NULL; temp=temp->next)
     {
 		stat(temp->path, &st);
-        if(st.st_mode == IS_DIR)
+        if(S_ISDIR(st.st_mode))
         {
             printf("dirQueue?: |%s| \n", temp->path);
         }
-        else if(st.st_mode == IS_REG)
+        else if(S_ISREG(st.st_mode))
         {
             printf("fileQueue?: |%s| \n", temp->path);
         }
@@ -196,24 +196,26 @@ typedef struct dwargs {
 //I dont think its a good idea to unlock before dequeue
 void* directoryworker(void* vargs) {
 	dwargs* args = (dwargs*)vargs;
-    int locked == pthread_mutex_trylock(&args->dq->lock);
+    int locked = pthread_mutex_trylock(&args->dq->lock);
     while(!(args->dq->open == 0 && args->dq->count == 0)) 
 	{
-		while(args->dq->count == 0) {
-			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock)
+		while(args->dq->count == 0) 
+		{
+			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock);
 		}
 		if(DEBUG)printf("there is a dir to read \n");
 
 		//chech for cond here
 		node* deqNode = (node*)malloc(sizeof(node));
-    	dequeue(deqNode, dir);
+    	dequeue(&deqNode, args->dq);
 		args->dq->open++;
     	pthread_mutex_unlock(&args->dq->lock);
 
 		if(deqNode==NULL) 
 		{
         	if(DEBUG) printf("there is something wrong\n");
-			return &EXIT_FAILURE;
+			return NULL;
+			//maybe not return (void*)&EXIT_FAILURE;
     	}
 
     	if(DEBUG) printf("here dequeded %s\n", deqNode->path);
@@ -242,18 +244,7 @@ void* directoryworker(void* vargs) {
         	stat(cpath, &st);
         	if(cpathlen == 0 || cdir->d_name[0] == '.' || !strncmp("wrap.", cdir->d_name, 5))
         	{
-            //if(1)printf("ignored bc there is no name: |%s| \n",currDir->d_name);
-            //cdir = readdir(qdir);
-            //continue;
-        	//} else if(currDir->d_name[0]=='.') {//. case
-            	//if(1)printf("ignored bc of .: %s \n",currDir->d_name);
-            	//cdir = readdir(qdir);
-            	//continue;
-        	//} else if(!strncmp("wrap.", cdir->d_name, 5)) {
-            	//if(1)printf("ignored bc of wrap.: %s \n",currDir->d_name);
-            	//cdir = readdir(qdir);
-            	//continue;
-				if(DEBUG) printf("%s\n", cdir->d_name);
+				if(DEBUG) printf("ignored to put in queue|%s|\n", cdir->d_name);
         	} else if(S_ISDIR(st.st_mode)) { //check if a directory is a folder
             	//if(1)printf("adding |%s| to dirQueue\n",newDir);
             	node* n = (node*)malloc(sizeof(node));
@@ -279,14 +270,12 @@ void* directoryworker(void* vargs) {
     	closedir(qdir);
 
     	pthread_mutex_lock(&args->dq->lock);
-    	if(DEBUG)printf("locked \n");
     	args->dq->open--;
-    	if(DEBUG)printf("unlocked \n");
     	pthread_mutex_unlock(&args->dq->lock);
     }
-    if(DEBUG)printf("unlocked \n");
     if(locked == 0) pthread_mutex_unlock(&args->dq->lock);
-    return &EXIT_SUCCESS;
+    return NULL;
+	//maybe not return (void*)&EXIT_FAILURE;
 }
 
 typedef struct fwargs {
@@ -317,16 +306,16 @@ void* fileworker(void* vargs) {
 
 		char wrappre[5] = "wrap.";
 		int pathlen = strlen(deqNode->path), ls;
-		char writepath[pathlen + 6];
+		char* writepath = (char*)malloc((pathlen + 6));
 		for(int i = 0; i < pathlen; i++) {
-			writepath[i] = deqNode->path;
+			writepath[i] = deqNode->path[i];
 			if(writepath[i] == '/') ls = i;
 		}
 		memcpy(&writepath[ls + 1], &wrappre, 5);
 		memcpy(&writepath[ls + 6], &deqNode->path[ls + 1], pathlen - ls + 2); // Does this add \0?
 		//writepath[pathlen + 6] = '\0';
 
-    	printf("open file |%s| and write to |%s|\n", pathToOpen, pathToWrite);
+    	printf("open file |%s| and write to |%s|\n", deqNode->path, writepath);
     	int fdr = open(deqNode->path, O_RDONLY);
     	int fdw = open(writepath, O_RDWR | O_CREAT |O_TRUNC, S_IRUSR|S_IWUSR);
     	ret = ret | wrap(fdr, fdw, args->line_len);
@@ -340,26 +329,9 @@ void* fileworker(void* vargs) {
     	pthread_mutex_unlock(&args->fq->lock);
 	}
 	if(locked == 0) pthread_mutex_unlock(&args->fq->lock);
-    return &ret;
-}
-
-
-bool updateCond(queue *dir) {
-    bool ret = false;
-    pthread_mutex_lock(&dir->lock);
-    printf("locked\n");
-    if(dir->count>0||dir->open>0)
-    {
-        ret = true;
-    }
-    printf("unlocked\n");
-    pthread_mutex_unlock(&dir->lock);
-    return ret;
-}
-
-int wwThreader(int N, int line_length, queue dir, queue file)
-{
-    return 1;
+	int* retVal = (int*)malloc(sizeof(int));
+	*retVal = ret;
+    return (void*)retVal;
 }
 
 int main(int argc, char** argv) 
@@ -370,8 +342,8 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
     int comma = -1;
-    int M = -1;
-    int N = -1;
+    int M = 1;
+    int N = 1;
     int strlength = strlen(argv[1]);
     int line_length = atoi(argv[2]);
     char* dirPath = argv[3];
@@ -432,7 +404,7 @@ int main(int argc, char** argv)
 	da->fq = fq;
 
 	for(int i = 0; i , M; i++) {
-		pthread_create(&dwtids[i], NULL, directoryworker, da)
+		pthread_create(&dwtids[i], NULL, directoryworker, da);
 	}
 
 	//Start Fileworker Threads
@@ -448,13 +420,14 @@ int main(int argc, char** argv)
 	int status = EXIT_SUCCESS;
 	int s;
 	// Join threads
-	for(int i = 0; i < M; i++) {
-		pthread_join(dwtids[i], &s);
+	for(int i = 0; i < M; i++) 
+	{
+		pthread_join(dwtids[i], (void*)&s);
 		status = status | s;
 	}
 
 	for(int i = 0; i < N; i++) {
-		pthread_join(fwtids[i], &s);
+		pthread_join(fwtids[i], (void*)&s);
 		status = status | s;
 	}
 	return status;
