@@ -383,10 +383,10 @@ void* fileworker(void* vargs) {
 		pthread_mutex_lock(&args->fq->lock);
 		//printf("im working--------------------g  ot through locks\n");
 		if(args->fq->count == 0 && dirsempty == 1) {
-			//pthread_cond_signal(&args->fq->dequeue_ready);
+			pthread_cond_signal(&args->fq->dequeue_ready);
 			pthread_mutex_unlock(&args->fq->lock);
 			printf("%d: exiting\n", args->tid);
-			//pthread_exit((void*)ret);
+			pthread_exit((void*)ret);
 			return (void*)ret;
 		}
 		while(args->fq->count == 0) {
@@ -403,9 +403,9 @@ void* fileworker(void* vargs) {
 			pthread_cond_wait(&args->fq->dequeue_ready, &args->fq->lock);
 		}
 		if(args->fq->count <= 0) {
-			//pthread_cond_signal(&args->fq->dequeue_ready);
+			pthread_cond_signal(&args->fq->dequeue_ready);
 			pthread_mutex_unlock(&args->fq->lock);
-			//pthread_exit((void*)ret);
+			pthread_exit((void*)ret);
 			return (void*)ret;
 		}
 		args->fq->open++;
