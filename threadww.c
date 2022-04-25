@@ -202,52 +202,52 @@ void* directoryworker(void* vargs) {
 	ret = &out;
 	dwargs* args = (dwargs*)vargs;
     while(true) {
-		printQueue(args->dq);
+		//printQueue(args->dq);
 		printf("%d: waiting for dir to dequeue\n", args->tid);
-		if(DEBUG)printf("   %d: lock dq\n", args->tid);
+		//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 		pthread_mutex_lock(&args->dq->lock);
 		printf("%d: %d open and %d total\n", args->tid, args->dq->open, args->dq->count);
 		if(args->dq->open == 0 && args->dq->count == 0) {
 			printf("%d: no more dirs\n", args->tid);
-			if(DEBUG)printf("   %d: lock fq\n", args->tid);
-			pthread_mutex_lock(&args->fq->lock);
+			//if(DEBUG)printf("   %d: lock fq\n", args->tid);
 			pthread_cond_signal(&args->dq->dequeue_ready);
-			pthread_cond_signal(&args->fq->dequeue_ready);
-			if(DEBUG)printf("   %d: unlock dq\n", args->tid);
 			pthread_mutex_unlock(&args->dq->lock);
-			if(DEBUG)printf("   %d: unlock fq\n", args->tid);
+			pthread_mutex_lock(&args->fq->lock);
+			pthread_cond_signal(&args->fq->dequeue_ready);
+			//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+			//if(DEBUG)printf("   %d: unlock fq\n", args->tid);
 			pthread_mutex_unlock(&args->fq->lock);
 			pthread_exit((void*)ret);
-			return NULL;
+			return (void*)ret;
 		}
 		while(args->dq->count == 0 && args->dq->open > 0) {
-			if(DEBUG)printf("   %d: unlock dq\n", args->tid);
-			printf("   %d: waiting\n", args->tid);
+			//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+			//printf("   %d: waiting\n", args->tid);
 			pthread_cond_wait(&args->dq->dequeue_ready, &args->dq->lock);
-			if(DEBUG)printf("   %d: lock dq\n", args->tid);
+			//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 		}
 		printf("%d: %d open and %d total\n", args->tid, args->dq->open, args->dq->count);
 		if(args->dq->open == 0 && args->dq->count == 0) {
 			printf("%d: no more dirs\n", args->tid);
-			if(DEBUG)printf("   %d: lock fq\n", args->tid);
-			pthread_mutex_lock(&args->fq->lock);
+			//if(DEBUG)printf("   %d: lock fq\n", args->tid);
 			pthread_cond_signal(&args->dq->dequeue_ready);
-			pthread_cond_signal(&args->fq->dequeue_ready);
-			if(DEBUG)printf("   %d: unlock dq\n", args->tid);
 			pthread_mutex_unlock(&args->dq->lock);
-			if(DEBUG)printf("   %d: unlock fq\n", args->tid);
+			pthread_mutex_lock(&args->fq->lock);
+			pthread_cond_signal(&args->fq->dequeue_ready);
+			//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+			//if(DEBUG)printf("   %d: unlock fq\n", args->tid);
 			pthread_mutex_unlock(&args->fq->lock);
 			pthread_exit((void*)ret);
-			return NULL;
+			return (void*)ret;
 		}
 		//printQueue(args->dq);
-		if(DEBUG)printf("%d: there is a dir to read \n", args->tid);
+		//if(DEBUG)printf("%d: there is a dir to read \n", args->tid);
 
 		//chech for cond here
 		node* deqNode = (node*)malloc(sizeof(node));
     	dequeue(&deqNode, args->dq);
 		args->dq->open++;
-		if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+		//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
     	pthread_mutex_unlock(&args->dq->lock);
 
 		if(deqNode==NULL) 
@@ -264,17 +264,17 @@ void* directoryworker(void* vargs) {
 			node* n = (node*)malloc(sizeof(node));
 			n->path = deqNode->path;
 			n->next = NULL;
-			if(DEBUG)printf("   %d: lock fq\n", args->tid);
+			//if(DEBUG)printf("   %d: lock fq\n", args->tid);
 			pthread_mutex_lock(&args->fq->lock);
 			enqueue(n, args->fq);
 			pthread_cond_signal(&args->fq->dequeue_ready);
-			if(DEBUG)printf("   %d: unlock fq\n", args->tid);
+			//if(DEBUG)printf("   %d: unlock fq\n", args->tid);
 			pthread_mutex_unlock(&args->fq->lock);
 
-			if(DEBUG)printf("   %d: lock dq\n", args->tid);
+			//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 			pthread_mutex_lock(&args->dq->lock);
     		args->dq->open--;
-			if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+			//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
     		pthread_mutex_unlock(&args->dq->lock);
 			continue;
 		}
@@ -313,12 +313,12 @@ void* directoryworker(void* vargs) {
 				n->path = cpath;
 				n->next = NULL;
 
-				if(DEBUG)printf("   %d: lock dq\n", args->tid);
+				//if(DEBUG)printf("   %d: lock dq\n", args->tid);
 				pthread_mutex_lock(&args->dq->lock);
 				enqueue(n, args->dq);
 				printf("%s\n", n->path);
 				pthread_cond_signal(&args->dq->dequeue_ready);
-				if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+				//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
 				pthread_mutex_unlock(&args->dq->lock);
 
         	} else if(S_ISREG(st.st_mode)) { //Check if a directory is file
@@ -327,25 +327,25 @@ void* directoryworker(void* vargs) {
 				n->path = cpath;
 				n->next = NULL;
 
-				if(DEBUG)printf("   %d: lock fq\n", args->tid);
+				//if(DEBUG)printf("   %d: lock fq\n", args->tid);
 				pthread_mutex_lock(&args->fq->lock);
 				enqueue(n, args->fq);
 				pthread_cond_signal(&args->fq->dequeue_ready);
-				if(DEBUG)printf("   %d: unlock fq\n", args->tid);
+				//if(DEBUG)printf("   %d: unlock fq\n", args->tid);
 				pthread_mutex_unlock(&args->fq->lock);
         	}
         	cdir = readdir(qdir);
     	}
     	closedir(qdir);
 
-		if(DEBUG)printf("   %d: lock dq\n", args->tid);
+		//if(DEBUG)printf("   %d: lock dq\n", args->tid);
     	pthread_mutex_lock(&args->dq->lock);
     	//if(DEBUG)printf("locked \n");
     	args->dq->open--;
     	//if(DEBUG)printf("unlocked \n");
-		if(DEBUG)printf("   %d: unlock dq\n", args->tid);
+		//if(DEBUG)printf("   %d: unlock dq\n", args->tid);
     	pthread_mutex_unlock(&args->dq->lock);
-		printf("read dir\n");
+		//printf("read dir\n");
     }
     //if(DEBUG)printf("unlocked \n");
     //if(locked == 0) pthread_mutex_unlock(&args->dq->lock);
@@ -374,19 +374,21 @@ void* fileworker(void* vargs) {
 		if true return (we are done)
 		otherwise read from queue and continue
 	*/
+	char dirsempty = 0;
 	while(true) {
-		printf("im working--------------------waiting for file to dequeue\n");
-		pthread_mutex_lock(&args->fq->lock);
+		//printf("im working--------------------w  aiting for file to dequeue\n");
 		pthread_mutex_lock(&args->dq->lock);
-		printf("im working--------------------got through locks\n");
-		if(args->dq->count == 0 && args->dq->open == 0 && args->fq->count == 0) {
+		if(args->dq->count == 0 && args->dq->open == 0) dirsempty = 1;
+		pthread_mutex_unlock(&args->dq->lock);
+		pthread_mutex_lock(&args->fq->lock);
+		//printf("im working--------------------g  ot through locks\n");
+		if(args->fq->count == 0 && dirsempty == 1) {
 			//pthread_cond_signal(&args->fq->dequeue_ready);
 			pthread_mutex_unlock(&args->fq->lock);
-			pthread_mutex_unlock(&args->dq->lock);
-			pthread_exit((void*)ret);
-			return NULL;
+			printf("%d: exiting\n", args->tid);
+			//pthread_exit((void*)ret);
+			return (void*)ret;
 		}
-		pthread_mutex_unlock(&args->dq->lock);
 		while(args->fq->count == 0) {
 			//pthread_mutex_lock(&args->dq->lock);
 			/*if(args->dq->count == 0 && args->dq->open == 0) {
@@ -403,8 +405,8 @@ void* fileworker(void* vargs) {
 		if(args->fq->count <= 0) {
 			//pthread_cond_signal(&args->fq->dequeue_ready);
 			pthread_mutex_unlock(&args->fq->lock);
-			pthread_exit((void*)ret);
-			return NULL;
+			//pthread_exit((void*)ret);
+			return (void*)ret;
 		}
 		args->fq->open++;
     	node* deqNode = (node*)malloc(sizeof(node));
@@ -523,35 +525,35 @@ int main(int argc, char** argv)
 		da[i] = di;
 	}
 
-	printf("hiii\n");
+	//printf("hiii\n");
 	for(int i = 0; i < M; i++) {
 		//da[i]->tid = i;
 		pthread_create(&dwtids[i], NULL, directoryworker, da[i]);
 	}
-
+	
 	//Start Fileworker Threads
 	pthread_t* fwtids = malloc(N * sizeof(pthread_t));
 	fwargs* fa = malloc(sizeof(fwargs));
 	fa->fq = fq;
 	fa->dq = dq;
 	fa->line_len = line_length;
-
 	for(int i = 0; i < N; i++) {
 		pthread_create(&fwtids[i], NULL, fileworker, fa);
 	}
 
-	printf("All threads started\n");
+	printf("All threads started-------------------------------------------------\n");
 
 	int status = EXIT_SUCCESS;
 	int* s;
 	// Join threads
 	for(int i = 0; i < M; i++) {
 		pthread_join(dwtids[i], (void*)s);
-		status = status | *s;
+		status = status;// | *s;
+		printf("joined %d\n", i);
 	}
 
 	printf("Dir workers done\n");
-	printQueue(fq);
+//	printQueue(fq);
 
 	for(int i = 0; i < N; i++) {
 		pthread_join(fwtids[i], (void*)s);

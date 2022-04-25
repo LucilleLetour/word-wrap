@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -g -Wall -fsanitize=address,undefined -std=c99
 CFLAGS2 = -g -std=c99 -pthread
 
-all: testing.c threadww.c
+all: threadww kekW
 	@:
 
 #ww: ww.c
