@@ -223,6 +223,8 @@ void* fileWorker(void* vargs)
     }
     pthread_mutex_unlock(&args->dq->lock);
     pthread_mutex_unlock(&args->fq->lock);
+
+    
     node* testing = (node*)malloc(sizeof(node));
     int temp = 0;
     while(1)

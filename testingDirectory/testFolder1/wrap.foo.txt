@@ -1,7 +1,4 @@
-hello This
-is Joshua
-A simple
-ww project
-for
-SYstems
+hello This is Joshua
+A simple ww project
+for SYstems
 PROGRAMMING
