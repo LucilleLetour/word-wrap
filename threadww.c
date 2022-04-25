@@ -452,7 +452,7 @@ int wwThreader(int N, int line_length, queue dir, queue file)
 
 int main(int argc, char** argv) 
 {
-    if(argc != 4)
+    if(argc < 3)
     {
         printf("ERROR: Invalid number of parameters\n");
         return EXIT_FAILURE;
@@ -508,10 +508,14 @@ int main(int argc, char** argv)
     queue* fq = (queue*)malloc(sizeof(queue));
     queue_init(fq);
 
-	node* f = malloc(sizeof(node));
-	f->path = argv[3];
-	f->next = NULL;
-	enqueue(f, dq);
+	int i = recursive ? 3 : 2;
+	// Or i = 2 if not recursive
+	for(; i < argc; i++) {
+		node* f = malloc(sizeof(node));
+		f->path = argv[i];
+		f->next = NULL;
+		enqueue(f, dq);
+	}
 
 	//printQueue(dq);
 
