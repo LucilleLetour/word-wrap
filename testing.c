@@ -217,43 +217,42 @@ void* fileWorker(void* vargs)
     if(args->dq->open==0 && args->dq->count==0 && args->fq->count==0)
     {
         printf("skipped\n");
-        pthread_mutex_unlock(&args->dq->lock);
         pthread_mutex_unlock(&args->fq->lock);
+        pthread_mutex_unlock(&args->dq->lock);
         pthread_exit(NULL);
     }
-    pthread_mutex_unlock(&args->dq->lock);
     pthread_mutex_unlock(&args->fq->lock);
+    pthread_mutex_unlock(&args->dq->lock);
+
     node* testing = (node*)malloc(sizeof(node));
     int temp = 0;
     while(1)
     {
-        pthread_mutex_lock(&args->dq->lock);
-        while(args->dq->count>0 || args->dq->open>0)
-        {
-            pthread_cond_wait(&args->fq->dequeue_ready, &args->dq->lock);
-        }
-
         pthread_mutex_lock(&args->fq->lock);
+        while(args->fq->count==0)
+        {
+            pthread_cond_wait(&args->fq->dequeue_ready, &args->fq->lock);
+        }
+        pthread_mutex_lock(&args->dq->lock);
         if(args->dq->count==0 && args->dq->open==0 && args->fq->count==0)
         {
-            pthread_mutex_unlock(&args->fq->lock);
             pthread_mutex_unlock(&args->dq->lock);
+            pthread_mutex_unlock(&args->fq->lock);
             printf("nothing left so bye|%lu|\n",args->tid);
             pthread_exit(NULL);
         }
+        pthread_mutex_unlock(&args->dq->lock);
         pthread_mutex_unlock(&args->fq->lock);
+        
+        printf("trying to dequeue something here\n");
         temp = dequeue((void*)testing, args->fq, args->tid);
+        printf("dequeued something here\n");
         if(temp == 0)
         {
             //pthread_cond_signal(&args->fq->dequeue_ready);
-            pthread_mutex_unlock(&args->dq->lock);
             continue;
         }
         
-
-        pthread_cond_signal(&args->fq->dequeue_ready);
-        pthread_mutex_unlock(&args->dq->lock);
-
         if(testing == NULL)
         {
             printf("nothing left so byeNULL\n");
@@ -272,10 +271,7 @@ void* fileWorker(void* vargs)
         pthread_mutex_lock(&args->fq->lock);
         if(1)printf("after popping: |%lu| count: |%d| open|%d|\n",args->tid,args->fq->count, args->fq->open);
         pthread_mutex_unlock(&args->fq->lock);
-
-        
     }
-    pthread_cond_signal(&args->fq->dequeue_ready);
 }
 
 int main(int argc, char** argv) 

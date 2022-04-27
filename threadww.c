@@ -481,73 +481,147 @@ int main(int argc, char** argv) {
     queue_init(dq);
     queue* fq = (queue*)malloc(sizeof(queue));
     queue_init(fq);
-
-	bool recursive;
-
-    int comma = -1;
-    int M = 0;
-    int N = 1;
 	int line_length;
-	if (strncmp("-r", argv[1], 2) == 0 || strncmp("-R", argv[1], 2) == 0) {
-    	recursive = true;
-		int strlength = strlen(argv[1]);
+	int M = 1;
+    int N = 1;
+	if(strncmp(argv[1],"-r",2) != 0)
+	{
+		printf("not recursive \n");
+		if(argc == 3)
+		{
+			execl("./ww",argv[1],argv[2]);
+			printf("ERROR: Failed execl\n");
+			return EXIT_FAILURE;
+		}
+		struct stat st;
+		for(int i = 2; i<argc; i++)
+		{
+			stat(argv[i], &st);
+			if(S_ISDIR(st.st_mode))
+        	{
+				DIR *givenDir = opendir(argv[i]);
+    			struct dirent *currDir;
+    			currDir = readdir(givenDir);
+				struct stat checkDir;
+				while(currDir!=NULL)
+    			{
+					int dirLen = strlen(argv[i]);
+					int cfLen = strlen(currDir->d_name);
+					char* cpath = (char*)malloc(dirLen + cfLen +2);
+					memcpy(cpath, argv[i], dirLen);
+					memcpy(&cpath[dirLen], "/", 1);
+					memcpy(&cpath[dirLen+1], currDir->d_name, cfLen);
+					memcpy(&cpath[dirLen+1+cfLen], "\0", 1);
+					stat(cpath, &checkDir);	
+					int cpathlen = strlen(currDir->d_name);
+					if(cpathlen == 0 || currDir->d_name[0] == '.' || !strncmp("wrap.", currDir->d_name, 5))
+        			{
+						//printf("ignored |%s| \n",  currDir->d_name);
+        			}
+					else if(S_ISREG(checkDir.st_mode))
+					{
+						//printf("added |%s| \n",  cpath);
+						node* fileAdd = (node*)malloc(sizeof(node));
+						fileAdd->path = cpath;
+						fileAdd->next = NULL;
+            			enqueue(fileAdd, fq);
+					}
+					currDir = readdir(givenDir);
+				}	
+       		}
+        	else if(S_ISREG(st.st_mode))
+        	{
+			node* fileAdd = (node*)malloc(sizeof(node));
+			fileAdd->path = argv[i];
+			fileAdd->next = NULL;
+            enqueue(fileAdd, fq);
+        	}
+		}
+	}
+	else
+	{
+		printf("recursive \n");
+		int comma = -1;
+    	int strlength = strlen(argv[1]);
     	line_length = atoi(argv[2]);
     	char* dirPath = argv[3];
-    	if(strlength==2) {
-    	    M = 1;
-    	    N = 1;
-    	    if(DEBUG) printf("running -r1,1 \n");
-    	} else {
-    	    int i;
-        	for(i = 2; i < strlength;i++) {
-        	    if(argv[1][i]==',') {
-        	        comma = i;
-        	        break;
-        	    }
+    	if(strlength==2)
+    	{
+        	M = 1;
+        	N = 1;
+        	if(DEBUG) printf("running -r1,1 \n");
+    	}
+		else
+    	{
+        	int i;
+        	for(i = 2; i < strlength;i++)
+        	{
+            	if(argv[1][i]==',')
+            	{
+                	comma = i;
+                	break;
+            	}
         	}
-        	if(comma == -1) {
-         	    char* Ntemp = (char*)malloc(sizeof(char)*(strlength-1));
-         	    memcpy(Ntemp,&argv[1][2],strlength-1);
-				N = atoi(Ntemp);
+        	if(comma == -1)
+        	{
+            	char* Ntemp = (char*)malloc(sizeof(char)*(strlength-1));
+            	memcpy(Ntemp,&argv[1][2],strlength-1);
+            	N = atoi(Ntemp);
             	if(DEBUG) printf("running -r%d since N is %d \n", N, N);
             	free(Ntemp);
-        	} else {
-        	    char* Mtemp = (char*)malloc(sizeof(char)*(i-1));
-        	    char* Ntemp = (char*)malloc(sizeof(char)*(strlength-i+1));
-        	    memcpy(Mtemp,&argv[1][2],i-1);
-        	    memcpy(Ntemp,&argv[1][i+1],strlength-i+1);
-        	    Mtemp[i-1] = '\0';
-        	    M = atoi(Mtemp);
-        	    N = atoi(Ntemp);
+        	}
+        	else
+        	{
+            	char* Mtemp = (char*)malloc(sizeof(char)*(i-1));
+            	char* Ntemp = (char*)malloc(sizeof(char)*(strlength-i+1));
+            	memcpy(Mtemp,&argv[1][2],i-1);
+            	memcpy(Ntemp,&argv[1][i+1],strlength-i+1);
+            	Mtemp[i-1] = '\0';
+            	M = atoi(Mtemp);
+            	N = atoi(Ntemp);
             	if(DEBUG) printf("running -r%d,%d since M is %d and N is %d \n", M,N, M,N);
             	free(Mtemp);
             	free(Ntemp);
         	}
-    	}
-		for(int i = 3; i < argc; i++) {
-			node* f = malloc(sizeof(node));
-			f->path = argv[i];
-			f->next = NULL;
-			enqueue(f, dq);
 		}
-	} else {
-		recursive = false;
-		line_length = atoi(argv[1]);
-		puts(argv[1]);
 		struct stat st;
-		for(int i = 2; i < argc; i++) {
-			printf("Looping over arg %s", argv[i]);
-			stat(argv[i], &st);
-			if(S_ISREG(st.st_mode)) {
-				node* f = malloc(sizeof(node));
-				f->path = argv[i];
-				f->next = NULL;
-				enqueue(f, fq);
-			} else if(S_ISDIR(st.st_mode)) {
-				dtoq(argv[i], fq);
-			}
+		for(int j = 3; j<argc; j++)
+		{
+			stat(argv[j], &st);
+			if(S_ISDIR(st.st_mode))
+        	{
+            	node* dirAdd = (node*)malloc(sizeof(node));
+				dirAdd->path = argv[j];
+				dirAdd->next = NULL;
+            	enqueue(dirAdd, dq);
+       		}
+        	else if(S_ISREG(st.st_mode))
+        	{
+				node* fileAdd = (node*)malloc(sizeof(node));
+				fileAdd->path = argv[j];
+				fileAdd->next = NULL;
+            	enqueue(fileAdd, fq);
+        	}
 		}
-	}
+    }
+
+
+	
+	// int recursive;
+	// int i = recursive ? 3 : 2;
+	// // Or i = 2 if not recursive
+	// for(; i < argc; i++) {
+	// 	node* f = malloc(sizeof(node));
+	// 	f->path = argv[i];
+	// 	f->next = NULL;
+	// 	enqueue(f, dq);
+	// }
+
+	printQueue(dq);
+	printQueue(fq);
+	/////////////////////////
+	//abort();
+	/////////////////////////
 
 	pthread_t* dwtids;
 	dwargs** da;
@@ -601,8 +675,6 @@ int main(int argc, char** argv) {
 	printf("%d\n", ko);
 	printf("???\n");
 	printf("File workers done\n");
-	printf("UWUWUWU\n");
-	printf("%d\n", status);
-	status = 1;
-	return EXIT_SUCCESS;
+	return status;
+
 }
