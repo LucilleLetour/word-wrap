@@ -89,9 +89,30 @@ In order for our program to work with multiple variations of system call for the
 After parsing, M directory workers will start and N file workers will start. If not present, it will default to -r1,1. Each thread started will have access to the directory queue, file queue, and the id which is used for debugging.
 
 ## Testing Strategy for System Call Parsing and EC ##
+To check if the system call was working, after parsing and before starting the multiple threads, each queue was printed and the M and N values were also printed. 
+1. Did it enqueue the proper directories and files?
+- This will make sure that the starting queues are correct and that no files are missed out accidentally
+2. Did it parse -rM,N properly?
+- This will make sure that the proper number of worker threads start.
+3. Is it printing to standard output when needed?
+- This will make sure that the wrapped text is not being written to a file
 
 ## Part VI: Testing Strategy ##
+For the final testing strategy, all the testing strategy previously noted were combined along with the DEBUG macro to print out necessary information when needed.
+1. Calling the program when called with -r1,1?
+- This makes sure that the program can reach its base case in the worst case scenario, confirming its robustness and capability with one thread each.
+2. Calling the program when called with -rc,1 where c is an appropriate thread count between 2 to 10?
+- This makes sure that multiple directory workers start and end properly, confirming that it is enqueuing as it should and stopping when it is empty.
+3. Calling the program when called with -r1,c where c is an appropriate thread count between 2 to 10?
+- This makes sure that multiple file workers start and end properly, confirming that it is enqueuing as it should and stopping when it is empty.
+4. Calling the program when called with -rc,d where c and d are appropriate thread counts between 2 to 10?
+- This makes sure that multiple directory and file worker threads start and end properly for the given directories and files in the queue.
+5. Calling the program when called with -rc,d where c and d are extreme thread counts between 1000 to 5000?
+- This makes sure that the threads do indeed end if there is nothing to do.
+
+After calling each call, each directory was carefully checked to see the proper wrapped file with the proper prefix with the line_lengths.
 
 ## Makefile ##
 For the Makefile, Wall, fsanitize=address,undefined , pthread, and std=c99 flags were set.
 
+In addition, there is a make cleant option to deleted any files with wrap. prefix to avoid manual labor after each trial.
