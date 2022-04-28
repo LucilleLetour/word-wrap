@@ -54,17 +54,20 @@ As a simple test before stepping into the workers, simple tests were conducted t
 
 In order to determine if the queue is correct, we have a print queue method that locks at the moment and reads to entire queue from the start of the queue.
 
+## Part III: Directory Worker ##
 
+## Testing Strategy for Directory Worker ##
 
+## Part IV: File Worker ##
 
+## Testing Strategy for File Worker ##
 
-## Part II: Word-Wrap with Directory ##
+## Part V: System Call Parsing and Extra Credit ##
 
-For part II of this project, it is divided into 2 parts: the first is dedicated to file management and the second is dedicated to calling the wrap function with the correct file discriptor. Given the various argc value, it calls the wrap function by giving it the appropriate fd values. For example, if it reads from standard output, the fd for reading would be 1 while standard in would be 0. If reading from a file or writing to a file, we can open directory and determine if it is a valid fd (not -1). When given a directory with mulitple files, chdir() was used to locally create the file within the folder. After all this, it will close all the necessary files and return the if it has failed during the wrap process. 
+## Testing Strategy for System Call Parsing and EC ##
 
-### Testing Strategy for Part II ###
-In order to test the different aspects of part II, the DEBUG macro was used to quickly determine which debug information to print. Firstly, a testing directory was created which included various test files and a directory. We determined that this procedure was correct as we could print out what each file was categorized under by testing the different directories and evaluating the results. Secondly, for creating the new file name with the "wrap." prefix, it was similarly tested by printing out the new name in comparison to the given file name.
+## Part VI: Testing Strategy ##
 
 ## Makefile ##
-For the Makefile, Wall, fsanitize=address,undefined , and std=c99 flags were set.
+For the Makefile, Wall, fsanitize=address,undefined , pthread, and std=c99 flags were set.
 
