@@ -34,11 +34,28 @@ The goal of this project is to extend the first part of the Word Wrap project to
 
 Word wrap works by doing a loop, character by character, of the input file, until the input is expended. At each iteration the character is either whitespace (space or newline) or a character. If it is a character we add it to a word buffer, but if it is whitespace we have more logic to execute. When encountering white space, we drain the word buffer if applicable and then handle cases like checking if two or more newlines in a row (new paragraph), multiple spaces in a row, etc. 
 
-### Testing Strategy for Word-Wrap###
+### Testing Strategy for Word-Wrap ###
 Word wrap was first tested manually with the example given and then with other manual string to ensure that spaces and newlines were handled correctly, and that the line length was correctly enforced. Then, we wrote a script that took in a sample text (lorem ipsum for example) and put a random number of spaces and possibly a newline between each word. When these random scripts were put into a directory and all wrapped at once they should be byte-identical at the end, and they were.
 
-## Part II: Queue for Directory and File##
-For this implementation of queue, there are two elements to allow multithreading: linked list nodes and and a queue struct. In each LL node, it stores the directory path as a char* and the next element in the LL. In each queue node, it stores the head of the LL, the rear of the LL, an integer to represent the number of open files, an integer to see how many nodes are in the queue, a mutex lock, and 2 conditional variables for enqueue and dequeue. 
+## Part II: Queue for Directory and File ##
+For this implementation of queue, there are two elements to allow multithreading: linked list nodes and and a queue struct. In each LL node, it stores the directory path as a char* and the next element in the LL. In each queue node, it stores the head of the LL, the rear of the LL, an integer to represent the number of open files, an integer to see how many nodes are in the queue, a mutex lock, and 2 conditional variables for enqueue and dequeue.
+
+In order to use the queue, there are three methods: initalize, enqueue, and dequeue. In initialize, it sets the head and rear to NULL, open and count to 0, and initializes all mutex related variables. In enqueue, it inserts the node to the end of the LL, and increments count to be used by other threads. In dequeue, it waits until a node is avaiable and dequeues that node when ready. However, if there are no elements in the queue and there are no potential paths to the added, it will return a NULL pointer. In this implementation, before calling enqueue or dequeue, the mutex must be locked; this approach was accepted as it allowed the thread that requested a node first will get it first to prevent starvation during multithreading.
+
+## Testing Strategy for Queue ##
+As a simple test before stepping into the workers, simple tests were conducted to see if it was operational.
+
+1. Does it return NULL when nothing is in the queue?
+- This will test the base case for dequeue as it is essential for multiple threads to stop
+2. Does it appropriatley queue the node or is it randomized due to multithreading?
+- This will test if the queue is actually a queue or just a LL
+3. What happens if multiple threads try to call dequeue or enqueue?
+- This will test if the queue dequeues the proper element when multiple threads are fighting for the mutex lock.
+
+In order to determine if the queue is correct, we have a print queue method that locks at the moment and reads to entire queue from the start of the queue.
+
+
+
 
 
 ## Part II: Word-Wrap with Directory ##
