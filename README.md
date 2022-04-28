@@ -55,7 +55,7 @@ As a simple test before stepping into the workers, simple tests were conducted t
 In order to determine if the queue is correct, we have a print queue method that locks at the moment and reads to entire queue from the start of the queue.
 
 ## Project layout ##
-There are two queues: One for storing directories and one for storing files. Each worker will have access to both of the queues to determine when the thread should stop running.
+There are two queues: One for storing directories and one for storing files. Each worker will have access to both of the queues to determine when the thread should stop running. There is one master thread in which the program will start and it will start M directory worker threads and N file worker threads. Thus at most 1 + M + N threads will start.
 
 ## Part III: Directory Worker ##
 For each directory worker that we start, it will continue as long as there is a node in the directory or there is a potential directory that can be added into the queue. As a base case, if this condition is no longer true, it will signal dequeue_ready, unlock mutex locks, and end the thread. Else, it will wait until there is a dequeue ready signal. After receving a signal, it will once again check if it can be dequeued. Else it will exit as normal. If there was a successful dequeue, it will open the directory and and go through each item. If the item is a file, it will be enqueued into the file queue. It will also check for the "wrap." case and "."/".." case as well. If the item is a directory, it will be enqueued to the directory queue. After that it will continue as normal and start again.
@@ -75,6 +75,18 @@ To test the directory workers, multiple folders were created with multiple subdi
 ## Testing Strategy for File Worker ##
 
 ## Part V: System Call Parsing and Extra Credit ##
+In order for our program to work with multiple variations of system call for the extra credit, mutiple variations of the calls were accounted for:
+1. Check for Valid argc
+- If there is less than 3 variables in the call, it is an invalid call and there for it is Errored out.
+2. Existence of -r in the call
+- If there is a -r in the call, it go through the arguements and enqueue the directories paths into the directory queue and enqueue the file paths into the file queue before multithreading
+- If there is not a -r in the call, it will go through the arguments and enqueue the files in the immediate subdirectories into the file queue.
+3. Add to directory queue and file queue when necessary
+4. Run the correct M and N for correct multi-threading
+- If there was a -r in the call, it will parse -rM,N and -rN and call it accordingly. Else, it will call -r1,1 as it is equivalent.
+- If only a single file is given, it will print to standard output.
+
+After parsing, M directory workers will start and N file workers will start. If not present, it will default to -r1,1. Each thread started will have access to the directory queue, file queue, and the id which is used for debugging.
 
 ## Testing Strategy for System Call Parsing and EC ##
 
