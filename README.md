@@ -28,7 +28,7 @@ For the Makefile, Wall, fsanitize=address,undefined , and std=c99 flags were set
 Project 3 of System Programming (CS214): Luke Letourneau(lml252) and Joshua Chung(jyc70)-Group _____________________________
 
 ## Goals ##
-The goal of this project is to extend the first part of the Word Wrap project to support recursive directory traversal along with multi-threading to read files and wrtie file. ./ww is a program that reformats a text file to fit in a certain number of columns (the page width) using only POSIX I/O functions(open(), read(), and write()). It will first read the given text file and either print the reformatted version onto standard output or save the reformatted version to a new text file with the "wrap." prefix. In this part of the project, there will be different queues (directory and file) in order for multiple threads to be working at the same time.
+The goal of this project is to extend the first part of the Word Wrap project to support recursive directory traversal along with multi-threading to read files and write file. ./ww is a program that reformats a text file to fit in a certain number of columns (the page width) using only POSIX I/O functions(open(), read(), and write()). It will first read the given text file and either print the reformatted version onto standard output or save the reformatted version to a new text file with the "wrap." prefix. In this part of the project, there will be different queues (directory and file) in order for multiple threads to be working at the same time.
 
 ## Part I: Word-Wrap ##
 
@@ -54,9 +54,21 @@ As a simple test before stepping into the workers, simple tests were conducted t
 
 In order to determine if the queue is correct, we have a print queue method that locks at the moment and reads to entire queue from the start of the queue.
 
+## Project layout ##
+There are two queues: One for storing directories and one for storing files. Each worker will have access to both of the queues to determine when the thread should stop running.
+
 ## Part III: Directory Worker ##
+For each directory worker that we start, it will continue as long as there is a node in the directory or there is a potential directory that can be added into the queue. As a base case, if this condition is no longer true, it will signal dequeue_ready, unlock mutex locks, and end the thread. Else, it will wait until there is a dequeue ready signal. After receving a signal, it will once again check if it can be dequeued. Else it will exit as normal. If there was a successful dequeue, it will open the directory and and go through each item. If the item is a file, it will be enqueued into the file queue. It will also check for the "wrap." case and "."/".." case as well. If the item is a directory, it will be enqueued to the directory queue. After that it will continue as normal and start again.
 
 ## Testing Strategy for Directory Worker ##
+To test the directory workers, multiple folders were created with multiple subdirectories that included empty files, empty folder, and folders with items to determine if everything was enqueued correctly.
+
+1. Does it enqueue all the files into the file queue on a single thread?
+- This will test the base case of if a single thread will continue and end at the base case.
+2. Does it enqueue all the files into the file queue on multiple threads? (around 2 to 5)
+- This will test if the files are enqueued properly and all threads end when there are nothing to be dequeued or waited for.
+3. Does it enqueue all the files into the file queue on a lot of threads? (around 10 to 100)
+- This will test if the files are enqueued properly and all threads end when they are met with the base case when they start.
 
 ## Part IV: File Worker ##
 
