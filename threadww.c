@@ -92,10 +92,22 @@ int wrap(int fdr, int fdw, int line_length)
 		if (wordlen > line_length) {
 			failed = true;
 		}
-		if (linelen + wordlen > line_length) {
-			write(fdw, "\n", 1);
-			linelen = 0;
-			pos++;
+		if(ins_space) {
+			if (linelen + wordlen + 1 > line_length) {
+				write(fdw, "\n", 1);
+				linelen = 0;
+				pos++;
+			} else {
+				write(fdw, " ", 1);
+				linelen++;
+				pos++;
+			}
+		} else {
+			if (linelen + wordlen > line_length) {
+				write(fdw, "\n", 1);
+				linelen = 0;
+				pos++;
+			}
 		}
 		for (int i = 0; i < wordlen; i++) {
 			write(fdw, word + i, 1);
