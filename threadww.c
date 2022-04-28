@@ -254,7 +254,8 @@ void* directoryworker(void* vargs) {
     	DIR* qdir = opendir(deqNode->path);
 
     	if(qdir == NULL) {
-        	printf("invalid directory in queue of |%s| \n", deqNode->path);
+        	printf("ERROR: invalid directory in queue of |%s| \n", deqNode->path);
+			return NULL;
     	}
 
     	struct dirent *cdir;
