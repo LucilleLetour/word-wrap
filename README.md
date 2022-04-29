@@ -26,7 +26,7 @@ For the Makefile, Wall, fsanitize=address,undefined , and std=c99 flags were set
 
 
 # word-wrap part 2
-Project 3 of System Programming (CS214): Luke Letourneau(lml252) and Joshua Chung(jyc70)-Group _____________________________
+Project 3 of System Programming (CS214): Luke Letourneau(lml252) and Joshua Chung(jyc70)-Group 50
 
 ## Goals ##
 The goal of this project is to extend the first part of the Word Wrap project to support recursive directory traversal along with multi-threading to read files and write files. ./ww is a program that reformats a text file to fit in a certain number of columns (the page width) using only POSIX I/O functions(open(), read(), and write()). It will first read the given text file and either print the reformatted version onto standard output or save the reformatted version to a new text file with the "wrap." prefix. In this part of the project, there will be different queues (directory and file) in order for multiple threads to be working at the same time.

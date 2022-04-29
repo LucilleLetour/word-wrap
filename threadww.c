@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #define printFailed 0
 
 typedef enum bool { false = 0, true = 1 } bool;
