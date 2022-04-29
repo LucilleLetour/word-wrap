@@ -72,8 +72,17 @@ To test the directory workers, multiple folders were created with multiple subdi
 - This will test if the files are enqueued properly and all threads end when they are met with the base case when they start.
 
 ## Part IV: File Worker ##
+For each file worker that we start, it will continue as long as there is a node in the file queue or there is a potential file that can be added to the queue. As a base case, if this condition is no longer true, it will signal dequeue_ready (to chain to end other file worker threads), unlock mutex locks, and end the thread. Else, it will wait until there is a dequeue-ready signal. After receiving a signal, it will once again check if it can be dequeued. Else it will exit as normal. If there was a successful dequeue, it will open the file at the given path and wrap it.
 
 ## Testing Strategy for File Worker ##
+The dequeue/wait logic was the same as in the directory worker, so once we had that logic we knew it would work. The fileworker was simple to test, as long as the nodes were added correctly, then the file should be wrapped to a new file (prefixed with "wrap."). In the case the program is run with one file as input (and should output to stdout), fileworker isn't used since it is built with the logic to create the output file.
+
+1. Does the fileworker wrap all files in the queue?
+- This will make sure the fileworker repeats until the queue is empty and does not terminate early, and that it is producing correctly named and wrapped files.
+2. Does the filworker clear the queue on multiple threads?
+- This will ensure that the fileworkers do not terminate early or fail to terminate when working across multiple threads, and that they work together to wrap every file once.
+3. Do the fileworkers wait for the queue to be finished before terminating?
+- We might have to wait for the directory workers to fill the queue with no work to do in the meantime, so it is possible there is nothing in the file queue (yet) but we should keep waiting since it is possible we will receive work.
 
 ## Part V: System Call Parsing and Extra Credit ##
 In order for our program to work with multiple variations of system call for the extra credit, multiple variations of the calls were accounted for:
